@@ -3,264 +3,933 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Steel Weight&Price</title>
-    
-    <!-- External Libraries -->
+    <title>Steel Weight and Price Calculator | STEEL CALC</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
+
+        /* --- Reset & Variables --- */
         :root {
-            --primary: #2563eb;       /* Blue 600 */
-            --primary-hover: #1d4ed8; /* Blue 700 */
-            --danger: #ef4444;        /* Red 500 */
-            --danger-hover: #dc2626;  /* Red 600 */
-            --warning: #f59e0b;       /* Amber 500 */
-            --success: #10b981;       /* Emerald 500 */
-            --secondary: #64748b;     /* Slate 500 */
-            --bg-body: #f1f5f9;       /* Slate 100 */
-            --bg-card: #ffffff;
-            --text-main: #1e293b;     /* Slate 800 */
-            --text-muted: #475569;    /* Slate 600 */
-            --border-color: #cbd5e1;  /* Slate 300 */
-            --focus-ring: rgba(37, 99, 235, 0.25);
+            --primary-color: #0b3d91;      /* สีน้ำเงินเข้มแบบวิศวกรรม */
+            --primary-hover: #082a63;
+            --accent-color: #dce775;       /* สีเขียวมะนาว/เหลือง สำหรับหัวตาราง */
+            --bg-color: #f4f6f9;           /* พื้นหลังเว็บแบบ Dashboard */
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --text-muted: #666666;
+            --border-color: #e2e8f0;
+            --danger-color: #dc3545;
+            --success-color: #28a745;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body { 
             font-family: 'Sarabun', sans-serif; 
-            background-color: var(--bg-body); 
+            background-color: var(--bg-color); 
             color: var(--text-main); 
-            line-height: 1.6;
-            padding: 20px;
+            line-height: 1.6; 
+            padding: 20px 10px;
         }
 
-        .hidden { display: none !important; }
-
-        .app-container { 
-            max-width: 1200px; 
+        .container { 
+            max-width: 1200px; /* ขนาดกำลังดีบนหน้าจอ Desktop */
             margin: 0 auto; 
-            background: var(--bg-card); 
-            padding: 30px; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s ease;
         }
 
-        .narrow-container { max-width: 500px; } /* For Auth & Payment */
-
-        .header-section { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e2e8f0; }
-        .header-section img { max-width: 90px; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 15px; }
-        h1, h2 { color: var(--text-main); font-weight: 700; margin-bottom: 10px; }
-        h1 { font-size: 1.75rem; }
-        h2 { font-size: 1.5rem; text-align: center; }
-        .subtitle { color: var(--text-muted); font-size: 0.95rem; }
-
-        .form-group { margin-bottom: 16px; }
-        label { display: block; font-weight: 600; margin-bottom: 6px; color: var(--text-main); font-size: 0.95rem; }
-        
-        input[type="text"], input[type="number"], input[type="email"], input[type="password"], select, input[type="file"] { 
-            font-family: 'Sarabun', sans-serif; 
-            width: 100%;
-            padding: 10px 14px; 
-            border: 1px solid var(--border-color); 
-            border-radius: 6px; 
-            font-size: 1rem;
-            background-color: #fff;
-            transition: all 0.2s ease;
-            color: var(--text-main);
-        }
-
-        input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--focus-ring); }
-
-        .btn { 
-            font-family: 'Sarabun', sans-serif;
-            background-color: var(--primary); 
-            color: white; 
-            border: none; 
-            border-radius: 6px;
-            cursor: pointer; 
-            font-weight: 600;
-            font-size: 1rem;
-            padding: 12px 20px; 
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            margin-bottom: 10px;
-        }
-        .btn:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
-        .btn:active { transform: translateY(0); }
-        .btn:disabled { background-color: #94a3b8; cursor: not-allowed; transform: none; }
-        
-        .btn-secondary { background-color: #f1f5f9; color: var(--text-main); border: 1px solid #cbd5e1; }
-        .btn-secondary:hover { background-color: #e2e8f0; }
-        
-        .btn-danger { background-color: var(--danger); }
-        .btn-danger:hover { background-color: var(--danger-hover); }
-
-        .btn-sm { padding: 6px 12px; font-size: 0.9rem; width: auto; margin-bottom: 0; }
-        .btn-inline { width: auto; margin-bottom: 0; }
-
-        .program-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 25px; }
-        @media (min-width: 600px) { .program-grid { grid-template-columns: 1fr 1fr; } }
-        
-        .program-card { 
-            background: #f8fafc; 
-            padding: 25px 20px; 
-            text-align: center; 
-            border-radius: 8px; 
-            border: 1px solid #e2e8f0; 
-            cursor: pointer; 
-            transition: all 0.2s; 
-        }
-        .program-card:hover { background: #fff; border-color: var(--primary); box-shadow: 0 4px 12px rgba(37,99,235,0.1); transform: translateY(-3px); }
-        .program-card h3 { margin-top: 0; font-size: 1.1rem; color: var(--primary); margin-bottom: 5px; }
-        .program-card p { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0; }
-        
-        .calc-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+        /* --- UI Cards --- */
+        .card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            padding: 25px;
             margin-bottom: 25px;
-        }
-        @media (min-width: 768px) {
-            .calc-grid { flex-direction: row; flex-wrap: wrap; align-items: flex-end; }
-            .calc-grid .form-group { flex: 1 1 200px; margin-bottom: 0; }
-            .calc-grid .full-width { flex: 1 1 100%; }
+            border: 1px solid var(--border-color);
         }
 
-        .checkbox-wrapper { display: flex; align-items: center; gap: 8px; padding: 8px 0; margin-bottom: 10px; }
-        .checkbox-wrapper input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
-        .checkbox-wrapper label { margin-bottom: 0; cursor: pointer; font-weight: normal; color: var(--text-muted); }
-
-        #custom-inputs-container {
-            border-left: 4px solid var(--primary);
-            background-color: #f8fafc;
-            padding: 15px 20px;
-            border-radius: 0 8px 8px 0;
+        .header-section {
+            text-align: center;
             margin-bottom: 20px;
         }
 
-        .table-header { display: flex; justify-content: space-between; align-items: center; margin-top: 30px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0; }
-        .table-title { font-size: 1.25rem; font-weight: 700; color: var(--text-main); }
-        
-        .table-container { overflow-x: auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 1000px; }
-        th, td { border-bottom: 1px solid #e2e8f0; padding: 12px 16px; text-align: left; }
-        th { background-color: #f8fafc; color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.8rem; position: sticky; top: 0; z-index: 10; }
-        
-        th:nth-child(1), td:nth-child(1) { width: 50px; text-align: center;} 
-        th:nth-child(n+5):nth-child(-n+11), td:nth-child(n+5):nth-child(-n+11) { text-align: right; }
+        .header-section img {
+            max-width: 120px; 
+            border-radius: 50%; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+
+        h1 { 
+            color: var(--primary-color); 
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        /* --- Form Layout (Responsive Grid) --- */
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(1, 1fr); /* Mobile default */
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        /* Tablet & Desktop Layout */
+        @media (min-width: 600px) {
+            .form-row { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (min-width: 900px) {
+            .form-row { grid-template-columns: repeat(4, 1fr); }
+            .form-row.two-cols { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 6px;
+            font-size: 0.95rem;
+        }
+
+        input[type="text"], input[type="number"], select { 
+            font-family: 'Sarabun', sans-serif; 
+            padding: 10px 12px; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 6px; 
+            width: 100%; 
+            font-size: 1rem;
+            transition: all 0.3s;
+            background-color: #fff;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(11, 61, 145, 0.1);
+        }
+
+        /* Custom Input Box */
+        #custom-inputs-container { 
+            background: #f8fafc; 
+            border-left: 4px solid var(--primary-color); 
+            padding: 15px; 
+            border-radius: 4px; 
+            margin-bottom: 20px; 
+            display: none; 
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 15px 0;
+            padding: 10px;
+            background: #f1f5f9;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .checkbox-container label {
+            font-weight: 600;
+            color: var(--primary-color);
+            cursor: pointer;
+            margin-bottom: 0;
+        }
+
+        /* --- Buttons --- */
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .btn { 
+            font-family: 'Sarabun', sans-serif; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary { 
+            background-color: var(--primary-color); 
+            color: white; 
+            box-shadow: 0 4px 6px rgba(11, 61, 145, 0.2);
+        }
+
+        .btn-primary:hover { 
+            background-color: var(--primary-hover); 
+            transform: translateY(-1px);
+            box-shadow: 0 6px 10px rgba(11, 61, 145, 0.3);
+        }
+
+        .btn-secondary { 
+            background-color: #e2e8f0; 
+            color: #475569; 
+        }
+
+        .btn-secondary:hover { 
+            background-color: #cbd5e1; 
+        }
+
+        .btn-danger-outline {
+            background-color: transparent;
+            border: 1px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+        .btn-danger-outline:hover {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .btn-full { width: 100%; }
+        @media (min-width: 600px) { .btn-full { width: auto; } }
+
+        /* --- Table Section --- */
+        .table-header-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .table-title { font-size: 1.2rem; font-weight: bold; color: var(--primary-color); }
+        .table-info { font-weight: 600; color: var(--text-muted); background: #f1f5f9; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem;}
+
+        .table-responsive { 
+            overflow-x: auto; 
+            -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 0.9rem; 
+            min-width: 1000px; /* ให้เลื่อนแนวนอนถ้าจอมือถือเล็ก */
+            white-space: nowrap;
+        }
+
+        th, td { 
+            padding: 12px 15px; 
+            text-align: left; 
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th { 
+            background-color: var(--accent-color); 
+            font-weight: 700; 
+            color: #33691e;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
         tbody tr:hover { background-color: #f8fafc; }
         
-        .delete-text { color: var(--danger); cursor: pointer; font-weight: 500; text-decoration: underline; }
-        .delete-text:hover { color: var(--danger-hover); }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
 
-        .summary-section { display: flex; flex-direction: column; align-items: flex-end; margin-top: 20px; background-color: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; }
-        .summary-row { font-size: 1.1rem; margin-bottom: 5px; color: var(--text-muted); }
-        .summary-row.total { font-size: 1.3rem; font-weight: 700; color: var(--primary); margin-top: 5px; border-top: 1px dashed #cbd5e1; padding-top: 10px; }
+        td .delete-link { 
+            color: var(--danger-color); 
+            cursor: pointer; 
+            text-decoration: none; 
+            font-weight: 600;
+        }
+        td .delete-link:hover { text-decoration: underline; }
+
+        /* --- Summary Section --- */
+        .summary-section { 
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-end;
+            background-color: #f8fafc; 
+            padding: 20px; 
+            border-radius: 8px; 
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
         
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e2e8f0;}
-        .user-info { font-size: 0.9rem; color: var(--text-muted); }
-        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
-        
-        /* Modal Styles */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
-        .modal-overlay.active { opacity: 1; pointer-events: auto; }
-        .modal-content { background: #fff; padding: 24px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); transform: translateY(-20px); transition: transform 0.2s ease; }
-        .modal-overlay.active .modal-content { transform: translateY(0); }
-        .modal-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 10px; color: var(--text-main); }
-        .modal-message { color: var(--text-muted); margin-bottom: 20px; font-size: 0.95rem; line-height: 1.5; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        @media (min-width: 600px) {
+            .summary-section { flex-direction: row; justify-content: flex-end; gap: 30px; }
+        }
+
+        .summary-box {
+            text-align: right;
+        }
+
+        .summary-box span { display: block; font-size: 0.9rem; color: var(--text-muted); }
+        .summary-box strong { display: block; font-size: 1.4rem; color: var(--primary-color); }
+
+        /* Scrollbar ปรับแต่งให้สวยงาม */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Alerts */
+        .status-message {
+            padding: 12px 15px; margin-bottom: 20px; border-radius: 6px; text-align: center; font-weight: 600;
+            display: none;
+        }
+        .status-success { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        .status-error { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .show { display: block; }
     </style>
 </head>
 <body>
-
-    <div id="custom-modal" class="modal-overlay">
-        <div class="modal-content">
-            <div id="modal-title" class="modal-title">Notification</div>
-            <div id="modal-message" class="modal-message">Message goes here.</div>
-            <div class="modal-actions">
-                <button id="modal-cancel" class="btn btn-secondary btn-inline hidden">ยกเลิก</button>
-                <button id="modal-ok" class="btn btn-inline">ตกลง</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="auth-section" class="app-container narrow-container view-section">
+    <div class="container">
+        
+        <!-- Header -->
         <div class="header-section">
-            <h2>เข้าสู่ระบบ / สมัครสมาชิก</h2>
-            <p class="subtitle">ระบบจัดการงานโครงสร้างเหล็ก</p>
-        </div>
-        <div class="form-group">
-            <label for="email">อีเมล (Email):</label>
-            <input type="email" id="email" placeholder="example@email.com">
-        </div>
-        <div class="form-group">
-            <label for="password">รหัสผ่าน (Password):</label>
-            <input type="password" id="password" placeholder="ขั้นต่ำ 6 ตัวอักษร">
-        </div>
-        <button class="btn" id="btnLogin">เข้าสู่ระบบ (Login)</button>
-        <button class="btn btn-secondary" id="btnRegister">สมัครสมาชิกใหม่ (ทดลองใช้ฟรี 7 วัน)</button>
-    </div>
-
-    <div id="payment-section" class="app-container narrow-container view-section hidden">
-        <div class="top-bar">
-            <div class="user-info" id="show-email-payment">user@email.com</div>
-            <button class="btn btn-danger btn-sm logout-btn">ออกจากระบบ</button>
-        </div>
-        
-        <div class="header-section" style="margin-bottom: 15px; border-bottom:none;">
-            <h2 style="color: var(--warning);">แจ้งชำระเงินค่าสมาชิก</h2>
-            <p style="margin-top: 10px;">สถานะบัญชี: <strong style="color: var(--danger);" id="payment-status-text">รอการชำระเงิน / รออนุมัติ</strong></p>
-        </div>
-        
-        <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem; color: #991b1b;">
-            กรุณาโอนเงินและอัปโหลดสลิป เพื่อปลดล็อคการใช้งานระบบแบบเต็มรูปแบบ
+            <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiTI8ArlKd2egqIns8Sw0K0lik49Wm8njbdv5ElcaCrKWcPtr5m2G48H3PJSblB7lbFCRzpAKKeLE5JEKvDICQmvQRNJq3V5sxikhwGAmifqcoqxQ1DxQJ3RGzOcmwzwPzpWcI6DstETSb25jVs0OyBamzuicQwAV58bREqUSgK2p1rpHU0UXvPx3dz/s200/Gemini_Generated_Image_j8cw77j8cw77j8cw.png" alt="Steel Calculator Logo">
+            <h1>STEEL BOQ CALCULATOR</h1>
+            <p class="subtitle">โปรแกรมคำนวณน้ำหนักและราคาเหล็กโครงสร้าง</p>
         </div>
 
-        <div class="form-group">
-            <label>อัปโหลดหลักฐานการโอนเงิน (Slip):</label>
-            <input type="file" id="slip-file" accept="image/*">
-        </div>
-        <button class="btn" id="btnUpload">ส่งหลักฐานการชำระเงิน</button>
-    </div>
+        <div id="status-message" class="status-message"></div>
 
-    <div id="dashboard-section" class="app-container view-section hidden">
-        <div class="top-bar">
-            <div>
-                <div class="user-info" style="font-weight: 600; color: var(--text-main);" id="show-email-dashboard">user@email.com</div>
-                <div style="margin-top: 4px;">
-                    <span id="show-status-badge" class="status-badge" style="background: #dcfce7; color: #166534;">อนุมัติแล้ว</span>
+        <!-- Form Card -->
+        <div class="card">
+            <div class="form-row two-cols">
+                <div class="form-group">
+                    <label for="project-name">ชื่อโครงการ (Project Name):</label>
+                    <input type="text" id="project-name" placeholder="เช่น สร้างโกดังเก็บสินค้า">
+                </div>
+                <div class="form-group">
+                    <label for="work-category">หมวดงาน (Work Category):</label>
+                    <input type="text" id="work-category" placeholder="เช่น โครงหลังคา, เสาหลัก">
                 </div>
             </div>
-            <button class="btn btn-danger btn-sm logout-btn">ออกจากระบบ</button>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="steel-standard">มาตรฐานเหล็ก (Standard):</label>
+                    <select id="steel-standard">
+                        <option value="SS400">SS400</option>
+                        <option value="SS540">SS540</option>
+                        <option value="SM490">SM490</option>
+                        <option value="SM520">SM520</option>
+                        <option value="อื่นๆ">อื่นๆ</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="steel-type">ประเภทเหล็ก (Steel Type):</label>
+                    <select id="steel-type">
+                        <option value="beam">บีม (H-Beam / Wide Flange)</option>
+                        <option value="i-beam">ไอบีม (I-Beam)</option>
+                        <option value="cut-beam">คัทบีม (Cut-Beam)</option>
+                        <option value="angle">ฉาก (Angle)</option>
+                        <option value="channel">รางน้ำ (Channel)</option>
+                        <option value="squareTube">กล่องจัตุรัส (Square Tube)</option>
+                        <option value="rectangularTube">กล่องผืนผ้า (Rectangular Tube)</option>
+                        <option value="cLipChannel">ตัวซี (C-Lip Channel)</option>
+                        <option value="pipe">ท่อกลม (Round Pipe)</option>
+                        <option value="plate">แผ่น/แบน (Plate/Flat)</option>
+                        <option value="roundBar">เส้นกลม (Round Bar)</option>
+                        <option value="squareBar">สี่เหลี่ยมตัน (Square Bar)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="standard_select_group">
+                    <label>ขนาดมาตรฐาน (Size):</label>
+                    <select id="standard-select"></select>
+                </div>
+            </div>
+
+            <!-- Checkbox for Custom Size -->
+            <label class="checkbox-container" id="custom-toggle-container" style="display: none;">
+                <input type="checkbox" id="custom-toggle"> 
+                <span>กำหนดขนาดเอง (Build up / Custom Size)</span>
+            </label>
+
+            <!-- Custom Inputs Container -->
+            <div id="custom-inputs-container"></div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="length">ความยาวต่อชิ้น (เมตร):</label>
+                    <input type="number" id="length" value="6" step="0.001">
+                </div>
+                <div class="form-group">
+                    <label for="quantity">จำนวน (ท่อน/ชิ้น):</label>
+                    <input type="number" id="quantity" value="1">
+                </div>
+                <div class="form-group">
+                    <label for="item-price-per-kg">ราคาเหล็ก (บาท/กก.):</label>
+                    <input type="number" id="item-price-per-kg" value="25.0" step="0.01">
+                </div>
+                <div class="form-group" style="justify-content: flex-end;">
+                    <div class="action-buttons">
+                        <button id="add-btn" class="btn btn-primary btn-full">➕ เพิ่มรายการ</button>
+                        <button id="reset-btn" class="btn btn-secondary btn-full">ล้างแบบฟอร์ม</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div id="trial-status" class="hidden" style="background: #fef3c7; border: 1px solid #fde68a; color: #92400e; padding: 12px; border-radius: 8px; text-align: center; font-weight: 500; margin-bottom: 20px;">
-            ⏳ คุณอยู่ในช่วงทดลองใช้ฟรี เหลือเวลาอีก X วัน
+        <!-- Table Card -->
+        <div class="card">
+            <div class="table-header-box">
+                <div class="table-title">รายการคำนวณ (BOQ List)</div>
+                <div class="table-info" id="table-info">จำนวน: 0 รายการ</div>
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="text-center">No.</th> 
+                            <th>หมวดงาน</th> 
+                            <th>ขนาดเหล็ก</th> 
+                            <th class="text-center">เกรด</th>
+                            <th class="text-right">น้ำหนัก (กก./ม.)</th> 
+                            <th class="text-right">ความยาว (ม.)</th> 
+                            <th class="text-right">จำนวน</th> 
+                            <th class="text-right">นน./ชิ้น (กก.)</th>
+                            <th class="text-right">นน.รวม (กก.)</th> 
+                            <th class="text-right">ราคา/กก.</th> 
+                            <th class="text-right">ราคารวม (บาท)</th> 
+                            <th class="text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="boq-table-body">
+                        <!-- Data will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="summary-section">
+                <div class="summary-box">
+                    <span>น้ำหนักรวมทั้งหมด (Total Weight)</span>
+                    <strong id="total-weight-label">0.00 กก.</strong>
+                </div>
+                <div class="summary-box">
+                    <span>ราคารวมทั้งหมด (Total Price)</span>
+                    <strong id="total-price-label">0.00 บาท</strong>
+                </div>
+            </div>
+
+            <div class="action-buttons" style="justify-content: flex-end;">
+                <button id="clear-list-btn" class="btn btn-danger-outline">🗑️ ล้างรายการทั้งหมด</button>
+                <button id="export-csv-btn" class="btn btn-secondary">📊 นำออก CSV</button>
+                <button id="export-pdf-btn" class="btn btn-primary">📄 นำออก PDF</button>
+            </div>
         </div>
 
-        <div class="header-section" style="text-align: left; border-bottom: none; padding-bottom: 0;">
-            <h2>🛠️ แหล่งรวมโปรแกรมงานโครงสร้างเหล็ก</h2>
-            <p class="subtitle">เลือกโปรแกรมที่คุณต้องการใช้งานด้านล่าง</p>
-        </div>
+    </div>
 
-        <div class="program-grid">
-            <div class="program-card" id="card-calculator">
-                <h3>คำนวณน้ำหนักเหล็ก</h3>
-                <p>ประเมินน้ำหนักเหล็กรูปพรรณ และทำ BOQ</p>
-            </div>
-            <div class="program-card" onclick="openModal('แจ้งเตือน', 'โปรแกรมคำนวณระยะบากท่อกำลังอยู่ในระหว่างการพัฒนาครับ')">
-                <h3>คำนวณระยะบากท่อ</h3>
-                <p>แพทเทิร์นบากปากฉลาม / บากขี่ม้า</p>
-            </div>
-            <div class="program-card" onclick="openModal('แจ้งเตือน', 'โปรแกรมคำนวณ Miter Bend กำลังอยู่ในระหว่างการพัฒนาครับ')">
-                <h3>คำนวณ Miter Bend</h3>
-                <p>หาค่าตัดท่อต่อโค้ง</p>
-            </div>
-            <div class="program-card" onclick="openModal('แจ้งเตือน', 'โปรแกรม Data Extraction กำลังอยู่ในระหว่างการพัฒนาครับ')">
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- 1. Data Source from Python Code (ยังคงเดิม) ---
+        const steelData = {
+            'beam': [
+                {'name': 'H 100x100x6.0x8', 'weight': 17.2}, {'name': 'H 125x125x6.5x9', 'weight': 23.8},
+                {'name': 'H 150x150x7.0x10', 'weight': 31.5}, {'name': 'H 175x175x7.5x11', 'weight': 40.2},
+                {'name': 'H 200x200x8.0x12', 'weight': 49.9}, {'name': 'H 200x204x12.0x12', 'weight': 56.2},
+                {'name': 'H 250x250x8.0x13', 'weight': 66.5}, {'name': 'H 250x250x9.0x14', 'weight': 72.4},
+                {'name': 'H 300x150x5.5x8', 'weight': 32.0}, {'name': 'H 300x300x9.0x14', 'weight': 87.0},
+                {'name': 'H 300x300x10.0x15', 'weight': 94.0}, {'name': 'H 350x350x12.0x19', 'weight': 137},
+                {'name': 'H 400x400x13.0x21', 'weight': 172}, {'name': 'WF 100x50x5.0x7', 'weight': 9.3},
+                {'name': 'WF 150x75x5.0x7', 'weight': 14.0}, {'name': 'WF 150x100x6.0x9', 'weight': 21.1},
+                {'name': 'WF 200x100x4.5x7', 'weight': 18.2}, {'name': 'WF 200x100x5.5x8', 'weight': 21.3},
+                {'name': 'WF 200x150x6.0x9', 'weight': 30.6}, {'name': 'WF 250x125x5.0x8', 'weight': 25.7},
+                {'name': 'WF 250x125x6.0x9', 'weight': 29.6}, {'name': 'WF 250x175x7.0x11', 'weight': 44.1},
+                {'name': 'WF 300x150x5.5x8', 'weight': 32.0}, {'name': 'WF 300x150x6.5x9', 'weight': 36.7},
+                {'name': 'WF 300x200x8.0x12', 'weight': 56.8}, {'name': 'WF 300x200x9.0x14', 'weight': 65.4},
+                {'name': 'WF 350x175x6.0x9', 'weight': 41.4}, {'name': 'WF 350x175x7.0x11', 'weight': 49.6},
+                {'name': 'WF 350x250x8.0x12', 'weight': 69.2}, {'name': 'WF 350x250x9.0x14', 'weight': 79.7},
+                {'name': 'WF 400x200x7.0x11', 'weight': 56.6}, {'name': 'WF 400x200x8.0x13', 'weight': 66.0},
+                {'name': 'WF 400x300x9.0x14', 'weight': 94.3}, {'name': 'WF 400x300x10.0x16', 'weight': 107},
+                {'name': 'WF 450x200x8.0x12', 'weight': 66.2}, {'name': 'WF 450x200x9.0x14', 'weight': 76.0},
+                {'name': 'WF 450x300x10.0x15', 'weight': 106}, {'name': 'WF 450x300x11.0x18', 'weight': 124},
+                {'name': 'WF 500x200x9.0x14', 'weight': 79.5}, {'name': 'WF 500x200x10.0x16', 'weight': 89.6},
+                {'name': 'WF 500x300x11.0x15', 'weight': 114}, {'name': 'WF 500x300x11.0x18', 'weight': 128},
+                {'name': 'WF 600x200x10.0x15', 'weight': 94.6}, {'name': 'WF 600x200x11.0x17', 'weight': 106},
+                {'name': 'WF 600x300x12.0x17', 'weight': 137}, {'name': 'WF 600x300x12.0x20', 'weight': 151},
+                {'name': 'WF 700x300x13.0x20', 'weight': 166}, {'name': 'WF 700x300x13.0x24', 'weight': 185},
+                {'name': 'WF 800x300x14.0x22', 'weight': 191}, {'name': 'WF 800x300x14.0x26', 'weight': 210},
+                {'name': 'WF 900x300x15.0x23', 'weight': 213}, {'name': 'WF 900x300x16.0x28', 'weight': 243}
+            ],
+            'i-beam': [
+                {'name': 'I 100x75x5.0x8', 'weight': 12.9}, {'name': 'I 125x75x5.5x9.5', 'weight': 16.1},
+                {'name': 'I 150x75x5.5x9.5', 'weight': 17.1}, {'name': 'I 150x125x8.5x14', 'weight': 36.2},
+                {'name': 'I 180x100x6.0x10', 'weight': 23.6}, {'name': 'I 200x100x7.0x10', 'weight': 26.0},
+                {'name': 'I 200x150x9.0x16', 'weight': 50.4}, {'name': 'I 250x125x7.5x12.5', 'weight': 38.3},
+                {'name': 'I 300x150x8.0x13', 'weight': 48.3}, {'name': 'I 350x150x9.0x15', 'weight': 58.5},
+                {'name': 'I 400x150x10.0x18', 'weight': 72.0}, {'name': 'I 450x175x11.0x20', 'weight': 91.7}
+            ],
+            'cut-beam': [
+                {'name': 'Cut H 200x200x8x13', 'weight': 33.0}, {'name': 'Cut H 200x300x10x16', 'weight': 53.5},
+                {'name': 'Cut H 200x400x13x21', 'weight': 86.0}, {'name': 'Cut H 225x200x9x14', 'weight': 38.0},
+                {'name': 'Cut H 225x300x11x18', 'weight': 62.0}, {'name': 'Cut H 250x200x10x16', 'weight': 44.8},
+                {'name': 'Cut H 250x300x11x18', 'weight': 64.0}, {'name': 'Cut H 300x200x11x17', 'weight': 53.0},
+                {'name': 'Cut H 300x300x12x20', 'weight': 75.5}, {'name': 'Cut H 350x300x13x24', 'weight': 92.5},
+                {'name': 'Cut H 400x300x14x26', 'weight': 105}, {'name': 'Cut H 450x300x16x28', 'weight': 121.5}
+            ],
+            'angle': [
+                {'name': 'L 25x25x3', 'weight': 1.12}, {'name': 'L 30x30x3', 'weight': 1.36}, 
+                {'name': 'L 40x40x3', 'weight': 1.83}, {'name': 'L 40x40x4', 'weight': 2.42},
+                {'name': 'L 40x40x5', 'weight': 2.95}, {'name': 'L 45x45x4', 'weight': 2.74},
+                {'name': 'L 50x50x3', 'weight': 2.33}, {'name': 'L 50x50x4', 'weight': 3.06},
+                {'name': 'L 50x50x5', 'weight': 3.77}, {'name': 'L 50x50x6', 'weight': 4.43},
+                {'name': 'L 60x60x4', 'weight': 3.68}, {'name': 'L 60x60x5', 'weight': 4.57},
+                {'name': 'L 60x60x6', 'weight': 5.42}, {'name': 'L 65x65x6', 'weight': 5.91},
+                {'name': 'L 70x70x5', 'weight': 5.00}, {'name': 'L 70x70x6', 'weight': 5.91},
+                {'name': 'L 75x75x5', 'weight': 5.00}, {'name': 'L 75x75x6', 'weight': 5.91},
+                {'name': 'L 75x75x9', 'weight': 8.73}, {'name': 'L 80x80x6', 'weight': 6.38},
+                {'name': 'L 80x80x7', 'weight': 7.32}, {'name': 'L 90x90x6', 'weight': 8.30},
+                {'name': 'L 90x90x7', 'weight': 9.59}, {'name': 'L 90x90x10', 'weight': 13.40},
+                {'name': 'L 100x100x7', 'weight': 10.70}, {'name': 'L 100x100x8', 'weight': 12.20},
+                {'name': 'L 100x100x10', 'weight': 15.20}, {'name': 'L 100x100x12', 'weight': 18.00},
+                {'name': 'L 120x120x8', 'weight': 14.70}, {'name': 'L 120x120x10', 'weight': 18.20},
+                {'name': 'L 125x125x9', 'weight': 17.20}, {'name': 'L 125x125x10', 'weight': 19.10},
+                {'name': 'L 130x130x9', 'weight': 17.90}, {'name': 'L 130x130x12', 'weight': 23.60},
+                {'name': 'L 150x150x10', 'weight': 23.00}, {'name': 'L 150x150x12', 'weight': 27.30},
+                {'name': 'L 150x150x15', 'weight': 33.70}, {'name': 'L 175x175x12', 'weight': 31.90},
+                {'name': 'L 175x175x15', 'weight': 39.50}, {'name': 'L 200x200x15', 'weight': 45.40},
+                {'name': 'L 200x200x20', 'weight': 59.90}, {'name': 'L 250x250x25', 'weight': 94.60}
+            ],
+            'channel': [
+                {'name': 'C 75x40x5.0x7.0', 'weight': 6.92}, {'name': 'C 100x50x5.0x7.5', 'weight': 9.36},
+                {'name': 'C 125x65x6.0x8.0', 'weight': 13.40}, {'name': 'C 150x75x6.5x10.0', 'weight': 18.60},
+                {'name': 'C 150x75x9.0x12.5', 'weight': 24.00}, {'name': 'C 180x75x7.0x10.5', 'weight': 21.40},
+                {'name': 'C 200x80x7.5x11.0', 'weight': 24.60}, {'name': 'C 200x90x8.0x13.5', 'weight': 30.30},
+                {'name': 'C 250x90x9.0x13.0', 'weight': 34.60}, {'name': 'C 250x90x11.0x14.5', 'weight': 40.20},
+                {'name': 'C 300x90x9.0x13.0', 'weight': 38.10}, {'name': 'C 300x90x10.0x15.5', 'weight': 43.80},
+                {'name': 'C 380x100x10.5x16.0', 'weight': 54.50}
+            ],
+            'squareTube': [
+                {'name': 'SHS 25x25x2.0', 'weight': 1.36}, {'name': 'SHS 25x25x2.3', 'weight': 1.53},
+                {'name': 'SHS 25x25x3.2', 'weight': 1.98}, {'name': 'SHS 32x32x2.3', 'weight': 2.04},
+                {'name': 'SHS 32x32x3.2', 'weight': 2.69}, {'name': 'SHS 38x38x2.3', 'weight': 2.47},
+                {'name': 'SHS 38x38x3.2', 'weight': 3.29}, {'name': 'SHS 50x50x1.6', 'weight': 2.38},
+                {'name': 'SHS 50x50x2.0', 'weight': 2.91}, {'name': 'SHS 50x50x2.3', 'weight': 3.34},
+                {'name': 'SHS 50x50x3.2', 'weight': 4.50}, {'name': 'SHS 50x50x4.0', 'weight': 5.35},
+                {'name': 'SHS 60x60x1.6', 'weight': 2.88}, {'name': 'SHS 60x60x2.3', 'weight': 4.06},
+                {'name': 'SHS 60x60x3.2', 'weight': 5.50}, {'name': 'SHS 75x75x2.3', 'weight': 5.14},
+                {'name': 'SHS 75x75x3.2', 'weight': 7.01}, {'name': 'SHS 75x75x4.0', 'weight': 8.59},
+                {'name': 'SHS 75x75x4.5', 'weight': 9.55}, {'name': 'SHS 90x90x3.2', 'weight': 8.51},
+                {'name': 'SHS 100x100x2.3', 'weight': 6.95}, {'name': 'SHS 100x100x3.2', 'weight': 9.52},
+                {'name': 'SHS 100x100x4.0', 'weight': 11.70}, {'name': 'SHS 100x100x4.5', 'weight': 13.10},
+                {'name': 'SHS 100x100x6.0', 'weight': 17.00}, {'name': 'SHS 125x125x3.2', 'weight': 12.00},
+                {'name': 'SHS 125x125x4.5', 'weight': 16.60}, {'name': 'SHS 125x125x5.0', 'weight': 18.30},
+                {'name': 'SHS 125x125x6.0', 'weight': 21.70}, {'name': 'SHS 150x150x3.2', 'weight': 14.54},
+                {'name': 'SHS 150x150x4.5', 'weight': 20.10}, {'name': 'SHS 150x150x5.0', 'weight': 22.30},
+                {'name': 'SHS 150x150x6.0', 'weight': 26.40}, {'name': 'SHS 200x200x4.5', 'weight': 27.20},
+                {'name': 'SHS 200x200x6.0', 'weight': 35.80}, {'name': 'SHS 250x250x5.0', 'weight': 38.00},
+                {'name': 'SHS 250x250x6.0', 'weight': 45.20}, {'name': 'SHS 300x300x4.5', 'weight': 41.30},
+                {'name': 'SHS 300x300x6.0', 'weight': 54.70}
+            ],
+            'rectangularTube': [
+                {'name': 'RHS 50x25x2.3', 'weight': 2.44}, {'name': 'RHS 50x25x3.2', 'weight': 3.24},
+                {'name': 'RHS 60x30x2.3', 'weight': 2.98}, {'name': 'RHS 60x30x3.2', 'weight': 3.99},
+                {'name': 'RHS 75x38x2.3', 'weight': 3.81}, {'name': 'RHS 75x38x3.2', 'weight': 5.15},
+                {'name': 'RHS 75x45x2.3', 'weight': 4.06}, {'name': 'RHS 75x45x3.2', 'weight': 5.50},
+                {'name': 'RHS 90x45x2.3', 'weight': 4.60}, {'name': 'RHS 90x45x3.2', 'weight': 6.25},
+                {'name': 'RHS 100x50x2.3', 'weight': 5.14}, {'name': 'RHS 100x50x3.2', 'weight': 7.01},
+                {'name': 'RHS 100x50x4.0', 'weight': 8.59}, {'name': 'RHS 100x50x4.5', 'weight': 9.55},
+                {'name': 'RHS 125x50x3.2', 'weight': 8.26}, {'name': 'RHS 125x50x4.0', 'weight': 10.20},
+                {'name': 'RHS 125x50x4.5', 'weight': 11.30}, {'name': 'RHS 125x75x2.3', 'weight': 6.95},
+                {'name': 'RHS 125x75x3.2', 'weight': 9.52}, {'name': 'RHS 125x75x4.0', 'weight': 11.70},
+                {'name': 'RHS 125x75x4.5', 'weight': 13.10}, {'name': 'RHS 125x75x6.0', 'weight': 17.00},
+                {'name': 'RHS 150x50x3.2', 'weight': 9.52}, {'name': 'RHS 150x50x4.5', 'weight': 13.08},
+                {'name': 'RHS 150x50x6.0', 'weight': 16.98}, {'name': 'RHS 150x75x3.2', 'weight': 10.80},
+                {'name': 'RHS 150x75x4.5', 'weight': 15.20}, {'name': 'RHS 150x75x6.0', 'weight': 19.80},
+                {'name': 'RHS 150x100x3.2', 'weight': 12.00}, {'name': 'RHS 150x100x4.5', 'weight': 16.60},
+                {'name': 'RHS 150x100x6.0', 'weight': 21.70}, {'name': 'RHS 200x100x4.5', 'weight': 20.10},
+                {'name': 'RHS 200x100x6.0', 'weight': 26.40}
+            ],
+            'cLipChannel': [
+                {'name': 'LLC 60x30x10x1.6', 'weight': 1.82}, {'name': 'LLC 75x45x15x2.3', 'weight': 3.25},
+                {'name': 'LLC 100x50x20x1.6', 'weight': 3.05}, {'name': 'LLC 100x50x20x2.3', 'weight': 4.29},
+                {'name': 'LLC 100x50x20x3.2', 'weight': 5.82}, {'name': 'LLC 125x50x20x2.3', 'weight': 4.68},
+                {'name': 'LLC 125x50x20x3.2', 'weight': 6.38}, {'name': 'LLC 150x50x20x2.3', 'weight': 5.07},
+                {'name': 'LLC 150x50x20x3.2', 'weight': 6.95}, {'name': 'LLC 150x65x20x3.2', 'weight': 7.72},
+                {'name': 'LLC 150x75x25x3.2', 'weight': 8.78}, {'name': 'LLC 150x75x25x4.0', 'weight': 10.90},
+                {'name': 'LLC 200x75x20x3.2', 'weight': 9.96}, {'name': 'LLC 200x75x25x4.5', 'weight': 13.70},
+                {'name': 'LLC 250x75x25x3.2', 'weight': 11.50}, {'name': 'LLC 250x75x25x4.5', 'weight': 15.90}
+            ]
+        };
+
+        const DENSITY = 7850;
+        let items = [];
+
+        // --- DOM Elements ---
+        const steelTypeSelect = document.getElementById('steel-type');
+        const standardSelect = document.getElementById('standard-select');
+        const standardSelectGroup = document.getElementById('standard_select_group');
+        const customCheckContainer = document.getElementById('custom-toggle-container');
+        const customInputsContainer = document.getElementById('custom-inputs-container');
+        const boqTableBody = document.getElementById('boq-table-body');
+        const totalWeightLabel = document.getElementById('total-weight-label');
+        const totalPriceLabel = document.getElementById('total-price-label');
+        const statusMessage = document.getElementById('status-message');
+
+        const standardTypes = ['beam', 'i-beam', 'cut-beam', 'angle', 'channel', 'squareTube', 'rectangularTube', 'cLipChannel'];
+        const customableTypes = ['beam', 'angle', 'channel', 'shaft', 'flatBar']; 
+
+        // Update templates to match new grid structure
+        const uiTemplates = {
+            plate: `<div class="form-row"><div class="form-group"><label>Width (mm):</label><input type="number" id="plate-width"></div><div class="form-group"><label>Thickness (mm):</label><input type="number" id="plate-thickness"></div></div>`,
+            roundBar: `<div class="form-row"><div class="form-group"><label>Diameter (mm):</label><input type="number" id="round-dia"></div></div>`,
+            squareBar: `<div class="form-row"><div class="form-group"><label>Side Size (mm):</label><input type="number" id="square-width"></div></div>`,
+            pipe: `<div class="form-row"><div class="form-group"><label>OD (mm):</label><input type="number" id="pipe-od"></div><div class="form-group"><label>Thickness (mm):</label><input type="number" id="pipe-thick"></div></div>`,
+            beamCustom: `<div class="form-row"><div class="form-group"><label>H (mm):</label><input type="number" id="beam-h"></div><div class="form-group"><label>B (mm):</label><input type="number" id="beam-b"></div><div class="form-group"><label>tw (web, mm):</label><input type="number" id="beam-t1"></div><div class="form-group"><label>tf (flange, mm):</label><input type="number" id="beam-t2"></div></div>`,
+            angleCustom: `<div class="form-row"><div class="form-group"><label>A (mm):</label><input type="number" id="angle-a"></div><div class="form-group"><label>B (mm):</label><input type="number" id="angle-b"></div><div class="form-group"><label>T (mm):</label><input type="number" id="angle-t"></div></div>`,
+            channelCustom: `<div class="form-row"><div class="form-group"><label>H (mm):</label><input type="number" id="channel-h"></div><div class="form-group"><label>B (mm):</label><input type="number" id="channel-b"></div><div class="form-group"><label>t1 (mm):</label><input type="number" id="channel-t1"></div><div class="form-group"><label>t2 (mm):</label><input type="number" id="channel-t2"></div></div>`,
+            shaftCustom: `<div class="form-row"><div class="form-group"><label>Diameter (mm):</label><input type="number" id="shaft-dia"></div></div>`,
+            flatBarCustom: `<div class="form-row"><div class="form-group"><label>Width (mm):</label><input type="number" id="flat-width"></div><div class="form-group"><label>Thickness (mm):</label><input type="number" id="flat-thickness"></div></div>`
+        };
+
+        const getNumValue = (id) => parseFloat(document.getElementById(id)?.value) || 0;
+
+        function showStatus(message, type = 'success') {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message status-${type} show`;
+            setTimeout(() => { statusMessage.classList.remove('show'); }, 3000);
+        }
+
+        function formatNumber(num, decimals = 2) {
+            return num.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+        }
+        function formatLength(num) {
+             return num.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+        }
+
+        function updateInputsUI() {
+            const selectedType = steelTypeSelect.value;
+            
+            // Reset custom toggle
+            const toggle = document.getElementById('custom-toggle');
+            if (toggle) toggle.checked = false;
+
+            if (standardTypes.includes(selectedType)) {
+                standardSelectGroup.style.display = 'flex';
+                standardSelect.innerHTML = '<option value="">-- เลือกขนาด --</option>';
+                if(steelData[selectedType]){
+                    steelData[selectedType].forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.weight;
+                        option.dataset.name = item.name;
+                        option.textContent = `${item.name} (${item.weight} kg/m)`;
+                        standardSelect.appendChild(option);
+                    });
+                }
+            } else {
+                standardSelectGroup.style.display = 'none';
+            }
+
+            if (customableTypes.includes(selectedType)) {
+                 customCheckContainer.style.display = 'flex';
+            } else {
+                 customCheckContainer.style.display = 'none';
+            }
+
+            if (!standardTypes.includes(selectedType)) {
+                customInputsContainer.style.display = 'block';
+                if (selectedType === 'plate') customInputsContainer.innerHTML = uiTemplates.plate;
+                else if (selectedType === 'roundBar') customInputsContainer.innerHTML = uiTemplates.roundBar;
+                else if (selectedType === 'squareBar') customInputsContainer.innerHTML = uiTemplates.squareBar;
+                else if (selectedType === 'pipe') customInputsContainer.innerHTML = uiTemplates.pipe;
+            } else {
+                customInputsContainer.style.display = 'none';
+                toggleCustomFieldsUI();
+            }
+        }
+
+        function toggleCustomFieldsUI() {
+            const selectedType = steelTypeSelect.value;
+            const toggle = document.getElementById('custom-toggle');
+            const isCustom = toggle ? toggle.checked : false;
+
+            if (!standardTypes.includes(selectedType)) return;
+
+            if(standardSelect) standardSelect.disabled = isCustom;
+            customInputsContainer.innerHTML = '';
+
+            if (isCustom) {
+                customInputsContainer.style.display = 'block';
+                if(selectedType === 'beam') customInputsContainer.innerHTML = uiTemplates.beamCustom;
+                else if(selectedType === 'angle') customInputsContainer.innerHTML = uiTemplates.angleCustom;
+                else if(selectedType === 'channel') customInputsContainer.innerHTML = uiTemplates.channelCustom;
+                else if(selectedType === 'shaft') customInputsContainer.innerHTML = uiTemplates.shaftCustom;
+                else if(selectedType === 'flatBar') customInputsContainer.innerHTML = uiTemplates.flatBarCustom;
+            } else {
+                customInputsContainer.style.display = 'none';
+            }
+        }
+
+        document.getElementById('custom-toggle').addEventListener('change', toggleCustomFieldsUI);
+
+        const calculators = {
+            plate:()=>{
+                const w=getNumValue("plate-width"),t=getNumValue("plate-thickness");
+                if(w<=0||t<=0)throw new Error("กรุณากรอกขนาดให้ครบถ้วน");
+                return{weight_per_m:w/1e3*t/1e3*DENSITY,description:`PLATE ${w}x${t} mm`}
+            },
+            roundBar:()=>{
+                const t=getNumValue("round-dia");
+                if(t<=0)throw new Error("กรุณากรอกขนาดให้ครบถ้วน");
+                const e=(t/1e3)/2;
+                return{weight_per_m:Math.PI*e**2*DENSITY,description:`RB Ø${t} mm`}
+            },
+            squareBar:()=>{
+                const t=getNumValue("square-width");
+                if(t<=0)throw new Error("กรุณากรอกขนาดให้ครบถ้วน");
+                return{weight_per_m:(t/1e3)**2*DENSITY,description:`SQUARE BAR ${t}x${t} mm`}
+            },
+            pipe:()=>{
+                const t=getNumValue("pipe-od"),e=getNumValue("pipe-thick");
+                if(t<=0||e<=0)throw new Error("กรุณากรอกขนาดให้ครบถ้วน");
+                const a=(t/1e3)/2,r=((t-2*e)/1e3)/2;
+                return{weight_per_m:Math.PI*(a**2-r**2)*DENSITY,description:`PIPE OD ${t} thick ${e} mm`}
+            },
+            standard:(isCustom,type)=>{
+                if(isCustom){
+                    if("beam"===type){
+                        const t=getNumValue("beam-h"),e=getNumValue("beam-b"),a=getNumValue("beam-t1"),r=getNumValue("beam-t2");
+                        if(!t||!e||!a||!r)throw new Error("กรุณากรอกขนาด H, B, t1, t2 ให้ครบถ้วน");
+                        return{weight_per_m:((t-2*r)/1e3*(a/1e3)+2*(e/1e3)*(r/1e3))*DENSITY,description:`BEAM (Custom) ${t}x${e}x${a}x${r} mm`}
+                    }
+                    if("angle"===type){
+                        const t=getNumValue("angle-a"),e=getNumValue("angle-b"),a=getNumValue("angle-t");
+                        if(!t||!e||!a)throw new Error("กรุณากรอกขนาด A, B, t ให้ครบถ้วน");
+                        return{weight_per_m:(t/1e3*(a/1e3)+(e-a)/1e3*(a/1e3))*DENSITY,description:`ANGLE (Custom) ${t}x${e}x${a} mm`}
+                    }
+                    if("channel"===type){
+                        const t=getNumValue("channel-h"),e=getNumValue("channel-b"),a=getNumValue("channel-t1"),r=getNumValue("channel-t2");
+                        if(!t||!e||!a||!r)throw new Error("กรุณากรอกขนาด H, B, t1, t2 ให้ครบถ้วน");
+                        return{weight_per_m:((t-2*r)/1e3*(a/1e3)+2*(e/1e3)*(r/1e3))*DENSITY,description:`CHANNEL (Custom) ${t}x${e}x${a}x${r} mm`}
+                    }
+                }else{
+                    const t=document.getElementById("standard-select"),e=t.options[t.selectedIndex];
+                    if(!e||!e.dataset.name)throw new Error("กรุณาเลือกขนาดเหล็กมาตรฐาน");
+                    return{weight_per_m:parseFloat(e.value),description:e.dataset.name}
+                }
+            }
+        };
+
+        function calculateWeight() {
+            try {
+                const type = steelTypeSelect.value;
+                const isCustom = document.getElementById('custom-toggle').checked;
+
+                if (standardTypes.includes(type)) {
+                    return calculators.standard(isCustom, type);
+                } else if (calculators[type]) {
+                    return calculators[type]();
+                }
+                throw new Error("ไม่พบประเภทเหล็กที่เลือก");
+            } catch (error) {
+                showStatus(`❌ ${error.message}`, 'error');
+                return null;
+            }
+        }
+
+        function addToList() {
+            const calculationResult = calculateWeight();
+            if (!calculationResult) return;
+            const category = document.getElementById('work-category').value.trim() || '-';
+            const standard = document.getElementById('steel-standard').value;
+            const length = getNumValue('length');
+            const quantity = getNumValue('quantity');
+            const price_per_kg = getNumValue('item-price-per-kg');
+
+            if (length <= 0 || quantity <= 0) {
+                showStatus("❌ ความยาวและจำนวนต้องมากกว่า 0", 'error'); 
+                return;
+            }
+            const { weight_per_m, description } = calculationResult;
+            const weight_piece = weight_per_m * length;
+            const total_weight = weight_piece * quantity;
+            const total_price = total_weight * price_per_kg;
+
+            items.push({ category, size: description, standard, weight_m: weight_per_m, length, quantity, weight_piece, total_weight, price_per_kg, total_price });
+            renderList();
+            showStatus("✅ เพิ่มรายการสำเร็จ", 'success');
+        }
+
+        function renderList() {
+            boqTableBody.innerHTML = '';
+            let totalWeight = 0, totalPrice = 0;
+            items.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="text-center">${index + 1}</td>
+                    <td>${item.category}</td>
+                    <td>${item.size}</td>
+                    <td class="text-center">${item.standard}</td>
+                    <td class="text-right">${formatNumber(item.weight_m)}</td>
+                    <td class="text-right">${formatLength(item.length)}</td>
+                    <td class="text-right">${item.quantity.toLocaleString()}</td>
+                    <td class="text-right">${formatNumber(item.weight_piece)}</td>
+                    <td class="text-right"><strong>${formatNumber(item.total_weight)}</strong></td>
+                    <td class="text-right">${formatNumber(item.price_per_kg)}</td>
+                    <td class="text-right" style="color: var(--primary-color); font-weight:bold;">${formatNumber(item.total_price)}</td>
+                    <td class="text-center"><a href="#" class="delete-link" data-index="${index}">ลบ</a></td>`;
+                boqTableBody.appendChild(row);
+                totalWeight += item.total_weight;
+                totalPrice += item.total_price;
+            });
+            document.getElementById('total-weight-label').textContent = `${formatNumber(totalWeight)} กก.`;
+            document.getElementById('total-price-label').textContent = `${formatNumber(totalPrice)} บาท`;
+            document.getElementById('table-info').textContent = `จำนวน: ${items.length} รายการ`;
+        }
+
+        function deleteItem(index) {
+            if(confirm("ยืนยันการลบรายการนี้?")) {
+                items.splice(index, 1);
+                renderList();
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('project-name').value = '';
+            document.getElementById('work-category').value = '';
+            document.getElementById('steel-type').selectedIndex = 0;
+            document.getElementById('length').value = '6';
+            document.getElementById('quantity').value = '1';
+            document.getElementById('item-price-per-kg').value = '25.0';
+            updateInputsUI();
+            showStatus("✅ ล้างแบบฟอร์มสำเร็จ", 'success');
+        }
+
+        function clearList() {
+            if(items.length === 0) return;
+            if(confirm("ต้องการล้างรายการทั้งหมดในตารางหรือไม่?")) {
+                items = [];
+                renderList();
+            }
+        }
+
+        // --- Export Functions ---
+        function exportToCSV() {
+            if (items.length === 0) return showStatus("❌ ไม่มีข้อมูลสำหรับนำออก", 'error');
+
+            let csvContent = "\uFEFFลำดับ,หมวดงาน,ขนาดเหล็ก,มาตรฐาน,นน./ม.,ยาว(ม.),จำนวน,นน./ชิ้น,นน.รวม(กก.),ราคา/กก.,ราคารวม(บาท)\n";
+
+            items.forEach((item, index) => {
+                let row = [
+                    index + 1,
+                    `"${item.category.replace(/"/g, '""')}"`,
+                    `"${item.size.replace(/"/g, '""')}"`,
+                    item.standard,
+                    item.weight_m.toFixed(2),
+                    item.length.toFixed(3),
+                    item.quantity,
+                    item.weight_piece.toFixed(2),
+                    item.total_weight.toFixed(2),
+                    item.price_per_kg.toFixed(2),
+                    item.total_price.toFixed(2)
+                ].join(",");
+                csvContent += row + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            const projectName = document.getElementById('project-name').value.trim().replace(/\s/g, '_') || "Steel_Project";
+
+            link.setAttribute("href", url);
+            link.setAttribute("download", `${projectName}_BOQ.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        async function exportToPDF() {
+            if (items.length === 0) return showStatus("❌ ไม่มีข้อมูลสำหรับนำออก", 'error');
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+
+            const projectName = document.getElementById('project-name').value || "Untitled Project";
+
+            doc.setFontSize(14);
+            doc.text(`Steel BOQ Report: ${projectName}`, 14, 15);
+            doc.setFontSize(10);
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 22);
+
+            const tableColumn = ["No.", "Category", "Size", "Std", "kg/m", "L (m)", "Qty", "kg/pc", "Total kg", "Price/kg", "Total Price"];
+            const tableRows = items.map((item, index) => [
+                index + 1,
+                item.category,
+                item.size,
+                item.standard,
+                item.weight_m.toFixed(2),
+                item.length.toFixed(3),
+                item.quantity,
+                item.weight_piece.toFixed(2),
+                item.total_weight.toFixed(2),
+                item.price_per_kg.toFixed(2),
+                item.total_price.toFixed(2)
+            ]);
+
+            doc.autoTable({
+                head: [tableColumn],
+                body: tableRows,
+                startY: 30,
+                styles: { font: "helvetica", fontSize: 8 },
+                headStyles: { fillColor: [11, 61, 145] },
+            });
+
+            const finalY = doc.lastAutoTable.finalY + 10;
+            const sumWeight = items.reduce((a, b) => a + b.total_weight, 0);
+            const sumPrice = items.reduce((a, b) => a + b.total_price, 0);
+
+            doc.setFontSize(10);
+            doc.text(`Total Weight: ${sumWeight.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} kg`, 14, finalY);
+            doc.text(`Total Price: ${sumPrice.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} THB`, 14, finalY + 7);
+
+            doc.save(`${projectName}_BOQ.pdf`);
+        }
+
+        // Event Listeners
+        steelTypeSelect.addEventListener('change', updateInputsUI);
+        document.getElementById('add-btn').addEventListener('click', addToList);
+        document.getElementById('reset-btn').addEventListener('click', resetForm);
+        document.getElementById('clear-list-btn').addEventListener('click', clearList);
+
+        boqTableBody.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-link')) {
+                e.preventDefault();
+                deleteItem(parseInt(e.target.dataset.index, 10));
+            }
+        });
+
+        document.getElementById('export-csv-btn').addEventListener('click', exportToCSV);
+        document.getElementById('export-pdf-btn').addEventListener('click', exportToPDF);
+
+        // Init
+        updateInputsUI();
+    });
+    </script>
+</body>
+</html>
