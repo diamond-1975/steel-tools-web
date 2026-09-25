@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <style>
@@ -25,7 +26,7 @@
         #lang-selector { width: 100px; }
 
         #property-panel {
-            position: absolute; top: 90px; right: 10px; width: 290px;
+            position: absolute; top: 90px; right: 10px; width: 310px;
             background: rgba(15, 23, 42, 0.95); border: 1px solid #334155;
             color: white; padding: 15px; border-radius: 8px;
             display: none; transform: translateX(120%); transition: transform 0.3s; z-index: 10;
@@ -34,6 +35,24 @@
         .input-group { margin-bottom: 8px; }
         .input-group label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 2px; }
         .input-group input, .input-group select { width: 100%; background: #0f172a; border: 1px solid #475569; color: white; padding: 6px; border-radius: 4px; font-size: 13px; }
+        
+        .meas-label {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid #0d9488;
+            color: #5eead4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: monospace;
+            pointer-events: none; 
+            white-space: nowrap;
+            margin-top: -10px;
+        }
+        .angle-label {
+            color: #fbbf24;
+            border-color: #d97706;
+            font-size: 11px;
+        }
     </style>
 </head>
 <body>
@@ -50,22 +69,37 @@
                 <option value="zh">🇨🇳 中文</option>
             </select>
         </div>
-        
-        <div class="global-input">
-            <label data-i18n="span">Span (กว้าง - mm)</label>
-            <input type="number" id="glb-span" value="1000" onchange="updateGlobalTruss()">
+
+        <div class="global-input border-l pl-2 border-slate-600">
+            <label class="text-purple-400 font-bold">รูปแบบการกำหนดค่า</label>
+            <select id="glb-input-mode" onchange="toggleInputMode()" style="border-color: #c084fc; width: 170px;">
+                <option value="angle">1. ระบุมุมองศา</option>
+                <option value="height">2. สูงซ้าย (เมนล่างระนาบพื้น)</option>
+            </select>
         </div>
-        <div class="global-input">
-            <label data-i18n="height">Height (สูง - mm)</label>
+
+        <div class="global-input mode-angle">
+            <label class="text-orange-400">องศาเมนล่าง (+ซ้ายสูง)</label>
+            <input type="number" id="glb-ang-bot" value="0" step="0.5" onchange="updateGlobalTruss()">
+        </div>
+        <div class="global-input mode-angle">
+            <label class="text-pink-400">องศาเมนบน (+ซ้ายสูง)</label>
+            <input type="number" id="glb-ang-top" value="10" step="0.5" onchange="updateGlobalTruss()">
+        </div>
+
+        <div class="global-input mode-height hidden">
+            <label class="text-pink-400 font-bold">สูงซ้าย (H1 - mm)</label>
+            <input type="number" id="glb-h-left" value="976.3" step="1" onchange="updateGlobalTruss()">
+        </div>
+
+        <!-- --- ย้ายสูงขวามาไว้ตรงนี้ เพื่อให้อยู่ติดกับสูงซ้าย --- -->
+        <div class="global-input border-l pl-2 border-slate-600">
+            <label class="font-bold text-white">สูงขวา (H2 - mm)</label>
             <input type="number" id="glb-height" value="800" onchange="updateGlobalTruss()">
         </div>
         <div class="global-input">
-            <label class="text-orange-400" data-i18n="ang_bot">องศาเมนล่าง (+ซ้ายสูง)</label>
-            <input type="number" id="glb-ang-bot" value="10" step="0.5" onchange="updateGlobalTruss()">
-        </div>
-        <div class="global-input">
-            <label class="text-orange-400" data-i18n="ang_top">องศาเมนบน (+ซ้ายสูง)</label>
-            <input type="number" id="glb-ang-top" value="10" step="0.5" onchange="updateGlobalTruss()">
+            <label class="font-bold text-white">กว้าง (Span - mm)</label>
+            <input type="number" id="glb-span" value="1000" onchange="updateGlobalTruss()">
         </div>
 
         <div class="global-input border-l pl-2 border-slate-600">
@@ -80,7 +114,7 @@
             <label class="text-green-400 font-bold" data-i18n="offset">ระยะร่นตัวทแยง (0 = มุม)</label>
             <input type="number" id="glb-offset" value="0" step="1" onchange="updateGlobalTruss()" style="border-color: #22c55e;">
         </div>
-        <div>
+        <div class="flex gap-1">
             <button data-i18n="btn_diag" onclick="toggleDiagonal()" type="button" class="bg-slate-700 border border-slate-500 hover:bg-slate-600 text-white py-1 px-3 rounded text-xs h-full">
                 🔄 สลับตัวทแยง
             </button>
@@ -149,10 +183,6 @@
 <script>
     const i18n = {
         "lang_label": { th: "🌍 ภาษา / Language", en: "🌍 Language", zh: "🌍 语言" },
-        "span": { th: "Span (กว้าง - mm)", en: "Span (Width - mm)", zh: "跨度 (宽 - mm)" },
-        "height": { th: "Height (สูง - mm)", en: "Height (mm)", zh: "高度 (mm)" },
-        "ang_bot": { th: "องศาเมนล่าง (+ซ้ายสูง)", en: "Bot Chord Angle", zh: "下弦角度" },
-        "ang_top": { th: "องศาเมนบน (+ซ้ายสูง)", en: "Top Chord Angle", zh: "上弦角度" },
         "miter_right": { th: "แบบจบขวาสุด", en: "Right End Type", zh: "右端类型" },
         "miter_saddle": { th: "1. ชนฉาก (Saddle)", en: "1. Saddle Cut", zh: "1. 鞍形切割" },
         "miter_miter": { th: "2. บากมุม (Miter)", en: "2. Miter Cut", zh: "2. 斜角切割" },
@@ -197,6 +227,9 @@
     });
 
     let scene, camera, renderer, controls, raycaster, mouse;
+    let labelRenderer; 
+    let labelsGroup = new THREE.Group(); 
+    
     let selectedEdgeId = null;
     let diagDirection = 1; 
     let helperMeshes = []; 
@@ -222,12 +255,21 @@
     function init() {
         const container = document.getElementById('canvas-container');
         scene = new THREE.Scene();
+        scene.add(labelsGroup); 
+        
         camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 10000);
         camera.position.set(500, 400, 2500);
 
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(container.clientWidth, container.clientHeight);
         container.appendChild(renderer.domElement);
+
+        labelRenderer = new THREE.CSS2DRenderer();
+        labelRenderer.setSize(container.clientWidth, container.clientHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none'; 
+        container.appendChild(labelRenderer.domElement);
 
         controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.target.set(500, 400, 0);
@@ -257,7 +299,23 @@
             camera.aspect = container.clientWidth / container.clientHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(container.clientWidth, container.clientHeight);
+            labelRenderer.setSize(container.clientWidth, container.clientHeight); 
         });
+    }
+
+    function toggleInputMode() {
+        const mode = document.getElementById('glb-input-mode').value;
+        const modeAngle = document.querySelectorAll('.mode-angle');
+        const modeHeight = document.querySelectorAll('.mode-height');
+        
+        if (mode === 'angle') {
+            modeAngle.forEach(el => el.classList.remove('hidden'));
+            modeHeight.forEach(el => el.classList.add('hidden'));
+        } else {
+            modeAngle.forEach(el => el.classList.add('hidden'));
+            modeHeight.forEach(el => el.classList.remove('hidden'));
+        }
+        updateGlobalTruss();
     }
 
     function calcDiagNodes() {
@@ -279,17 +337,31 @@
     }
 
     function updateGlobalTruss() {
-        const span = parseFloat(document.getElementById('glb-span').value);
-        const h = parseFloat(document.getElementById('glb-height').value); 
-        const angBot = parseFloat(document.getElementById('glb-ang-bot').value) * (Math.PI / 180); 
-        const angTop = parseFloat(document.getElementById('glb-ang-top').value) * (Math.PI / 180); 
+        const span = parseFloat(document.getElementById('glb-span').value) || 1000;
+        const hRight = parseFloat(document.getElementById('glb-height').value) || 800; 
+        const mode = document.getElementById('glb-input-mode').value;
         
+        let leftY_Bot, leftY_Top;
+
+        if (mode === 'angle') {
+            const angBot = (parseFloat(document.getElementById('glb-ang-bot').value) || 0) * (Math.PI / 180); 
+            const angTop = (parseFloat(document.getElementById('glb-ang-top').value) || 0) * (Math.PI / 180); 
+            
+            leftY_Bot = span * Math.tan(angBot);
+            leftY_Top = hRight + (span * Math.tan(angTop));
+            
+            document.getElementById('glb-h-left').value = leftY_Top.toFixed(1);
+        } else {
+            leftY_Bot = 0; 
+            leftY_Top = parseFloat(document.getElementById('glb-h-left').value) || 800;
+            
+            document.getElementById('glb-ang-bot').value = "0";
+            const aTop = Math.atan((leftY_Top - hRight) / span) * (180 / Math.PI);
+            document.getElementById('glb-ang-top').value = aTop.toFixed(2);
+        }
+
         nodes['N2'].set(span, 0, 0); 
-        nodes['N4'].set(span, h, 0); 
-
-        const leftY_Bot = span * Math.tan(angBot);
-        const leftY_Top = h + (span * Math.tan(angTop));
-
+        nodes['N4'].set(span, hRight, 0); 
         nodes['N1'].set(0, leftY_Bot, 0); 
         nodes['N3'].set(0, leftY_Top, 0); 
         
@@ -311,12 +383,29 @@
         updateAllVisuals();
     }
 
-    // === เพิ่มฟังก์ชันที่หายไปกลับเข้ามาตรงนี้ครับ ===
     function toggleDiagonal() {
         diagDirection *= -1;
         updateGlobalTruss();
     }
-    // ===========================================
+
+    function getFabAngles(edge) {
+        let p1 = nodes[edge.start];
+        let p2 = nodes[edge.end];
+        let axis = new THREE.Vector3().subVectors(p2, p1).normalize();
+        
+        let angBot = null, angTop = null;
+        
+        if (edge.type.includes('Vertical') || edge.type.includes('Diagonal')) {
+            let axisTop = new THREE.Vector3().subVectors(nodes['N4'], nodes['N3']).normalize();
+            let aT = axis.angleTo(axisTop) * (180 / Math.PI);
+            angTop = Math.min(aT, 180 - aT); 
+            
+            let axisBot = new THREE.Vector3().subVectors(nodes['N2'], nodes['N1']).normalize();
+            let aB = axis.angleTo(axisBot) * (180 / Math.PI);
+            angBot = Math.min(aB, 180 - aB); 
+        }
+        return { angTop, angBot };
+    }
 
     function getPlaneCutDistance(pt, axis, N, vA, vB) {
         let n = new THREE.Vector3().subVectors(vA, vB).normalize();
@@ -454,6 +543,10 @@
             helperMeshes.push(s);
         });
 
+        while(labelsGroup.children.length > 0){ 
+            labelsGroup.remove(labelsGroup.children[0]); 
+        }
+
         const isMiterRight = document.getElementById('glb-miter-right') && document.getElementById('glb-miter-right').value === '1';
         const vertL = edges.find(e => e.id === 'E3');
         const vertR = edges.find(e => e.id === 'E4');
@@ -488,6 +581,42 @@
                 } else {
                     const mesh = createCutPipeMesh(edge);
                     scene.add(mesh); edge.pipeMesh = mesh;
+
+                    if (edge.type.includes('Vertical') || edge.type.includes('Diagonal')) {
+                        const data = getCutData(edge);
+                        const maxCutLen = (Math.max(...data.cutE) - Math.min(...data.cutS)).toFixed(1);
+                        const angles = getFabAngles(edge);
+
+                        let midPt = new THREE.Vector3().lerpVectors(nodes[edge.start], nodes[edge.end], 0.5);
+                        let divLen = document.createElement('div');
+                        divLen.className = 'meas-label';
+                        divLen.innerHTML = `L: ${maxCutLen}`; 
+                        let labelLen = new THREE.CSS2DObject(divLen);
+                        labelLen.position.copy(midPt);
+                        labelsGroup.add(labelLen);
+
+                        if (angles.angTop !== null) {
+                            let np1 = nodes[edge.start];
+                            let np2 = nodes[edge.end];
+                            let isP1Top = np1.y > np2.y;
+                            
+                            let ptTop = new THREE.Vector3().lerpVectors(np1, np2, isP1Top ? 0.2 : 0.8);
+                            let divAngT = document.createElement('div');
+                            divAngT.className = 'meas-label angle-label';
+                            divAngT.innerHTML = `${angles.angTop.toFixed(1)}&deg;`; 
+                            let labelAngT = new THREE.CSS2DObject(divAngT);
+                            labelAngT.position.copy(ptTop);
+                            labelsGroup.add(labelAngT);
+
+                            let ptBot = new THREE.Vector3().lerpVectors(np1, np2, isP1Top ? 0.8 : 0.2);
+                            let divAngB = document.createElement('div');
+                            divAngB.className = 'meas-label angle-label';
+                            divAngB.innerHTML = `${angles.angBot.toFixed(1)}&deg;`; 
+                            let labelAngB = new THREE.CSS2DObject(divAngB);
+                            labelAngB.position.copy(ptBot);
+                            labelsGroup.add(labelAngB);
+                        }
+                    }
                 }
             }
         });
@@ -694,6 +823,8 @@
         const doc = new jsPDF({ orientation: orient, format: paperSize, unit: 'mm' });
         
         const data = getCutData(edge);
+        const trueMaxLen = (Math.max(...data.cutE) - Math.min(...data.cutS)).toFixed(1);
+
         let minStart = Math.min(...data.cutS);
         const cutS = data.cutS.map(y => y - minStart);
         let maxEnd = Math.max(...data.cutE);
@@ -705,7 +836,7 @@
         const marginX = 15; 
 
         const reqWidth = data.circum + (marginX * 2);
-        const reqHeight = maxCutStart + marginY + maxCutEnd + marginY + 30; 
+        const reqHeight = maxCutStart + marginY + maxCutEnd + marginY + 45; 
         
         const paperDimPortrait = { 'a4': {w:210, h:297}, 'a3': {w:297, h:420}, 'a2': {w:420, h:594}, 'a1': {w:594, h:841}, 'a0': {w:841, h:1189} };
         const pw = orient === 'landscape' ? paperDimPortrait[paperSize].h : paperDimPortrait[paperSize].w;
@@ -716,10 +847,8 @@
         }
 
         doc.setFontSize(10);
-        doc.text(`Template: ${edge.type} (OD ${edge.baseOD} mm)`, marginX, 10);
-        doc.text(`* Print at 100% Scale (Do not fit to page)`, marginX, 15);
-
-        let startY = 30;
+        let startY = 20; 
+        
         doc.setLineWidth(0.5);
         doc.text("Part 1: Start Cut", marginX, startY - 5);
         doc.setDrawColor(200, 200, 200); 
@@ -737,11 +866,19 @@
         [0, 90, 180, 270, 360].forEach(deg => {
             let x = marginX + (deg / 360) * data.circum;
             doc.line(x, startY - 5, x, startY + maxCutStart + marginY);
-            doc.text(`${deg}°`, x - 3, startY - 7);
+            doc.text(`${deg}` + String.fromCharCode(176), x - 3, startY - 7);
         });
         doc.setLineDash([]); 
 
-        let startY2 = startY + maxCutStart + marginY + 25; 
+        let gapY = startY + maxCutStart + marginY + 15; 
+        doc.setFontSize(11);
+        doc.text(`Template: ${edge.type} (OD ${edge.baseOD} mm)`, marginX + 10, gapY);
+        doc.text(`Max Cut Length: ${trueMaxLen} mm`, marginX + 10, gapY + 6);
+        doc.setFontSize(9);
+        doc.text(`* Print at 100% Scale (Do not fit to page)`, marginX + 10, gapY + 12);
+        doc.setFontSize(10); 
+
+        let startY2 = gapY + 25; 
         doc.setDrawColor(0, 0, 0);
         doc.text("Part 2: End Cut", marginX, startY2 - 5);
         
@@ -760,7 +897,7 @@
         [0, 90, 180, 270, 360].forEach(deg => {
             let x = marginX + (deg / 360) * data.circum;
             doc.line(x, startY2, x, startY2 + marginY + maxCutEnd + 5);
-            doc.text(`${deg}°`, x - 3, startY2 + marginY + maxCutEnd + 10);
+            doc.text(`${deg}` + String.fromCharCode(176), x - 3, startY2 + marginY + maxCutEnd + 10);
         });
         doc.setLineDash([]);
 
@@ -771,6 +908,7 @@
         requestAnimationFrame(animate);
         controls.update();
         renderer.render(scene, camera);
+        if(labelRenderer) labelRenderer.render(scene, camera);
     }
 </script>
 
