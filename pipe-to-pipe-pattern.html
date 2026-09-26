@@ -1,0 +1,751 @@
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pipe to Pipe Pattern (Blueprint Setup)</title>
+    
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&family=Roboto+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+        .mono { font-family: 'Roboto Mono', monospace; }
+        .input-label { font-size: 0.75rem; color: #475569; font-weight: 600; margin-bottom: 2px; display: block; }
+        .input-field { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 1rem; transition: all 0.2s; background-color: #fff; }
+        @media (min-width: 768px) { .input-field { padding: 6px 10px; font-size: 0.9rem; } }
+        .input-field:focus { outline: none; border-color: #0f766e; box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.2); }
+        .tab-btn { cursor: pointer; padding: 10px 15px; font-size: 0.9rem; color: #64748b; border-bottom: 3px solid transparent; transition: all 0.2s; font-weight: 500; white-space: nowrap; }
+        .tab-btn:hover { color: #334155; background: #f1f5f9; }
+        .tab-btn.active { color: #0f766e; border-bottom-color: #0f766e; background: #f0fdfa; font-weight: 700; }
+        @media print {
+            body * { visibility: hidden; }
+            .print-area, .print-area * { visibility: visible; }
+            .print-area { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+            .no-print { display: none !important; }
+        }
+        input[type="radio"], input[type="checkbox"] {
+            -webkit-appearance: auto !important;
+            -moz-appearance: auto !important;
+            appearance: auto !important;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden text-slate-800">
+
+    <!-- Navbar -->
+    <nav class="bg-slate-900 text-white h-14 flex justify-between items-center px-4 shrink-0 z-30 shadow-md no-print">
+        <div class="flex items-center gap-3">
+            <button onclick="toggleSidebar()" class="lg:hidden text-slate-300 hover:text-white focus:outline-none">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+            <div class="bg-amber-500 w-8 h-8 rounded flex items-center justify-center shadow-lg text-slate-900"><i class="fas fa-tools"></i></div>
+            <div class="hidden sm:block">
+                <h1 class="text-base font-bold leading-none">Pipe to Pipe Pattern <span class="text-amber-400 text-[10px] ml-1 uppercase tracking-wider font-mono"></span></h1>
+                <p class="text-slate-400 text-[10px]">Blueprint Graph + 3D Feature</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-3">
+             <div class="hidden md:flex items-center gap-2 bg-slate-800 rounded px-2 py-1 border border-slate-700">
+                <label class="flex items-center cursor-pointer border-r border-slate-600 pr-2 mr-1" title="พิมพ์ครึ่งแผ่น (แนะนำเมื่อ Offset=0)">
+                    <input type="checkbox" id="halfPlate" class="w-3.5 h-3.5 accent-amber-500 rounded" onchange="toggleHalf('halfPlate')">
+                    <span class="ml-1.5 text-xs text-amber-400 font-bold whitespace-nowrap">Half Plate</span>
+                </label>
+
+                <span class="text-xs text-slate-400"><i class="fas fa-file-pdf mr-1"></i>Size:</span>
+                <select id="paperSize" class="bg-transparent text-white text-xs border-none py-1 px-2 outline-none cursor-pointer font-mono">
+                    <option value="a4">A4</option>
+                    <option value="a3">A3</option>
+                    <option value="a2">A2</option>
+                    <option value="a1">A1</option>
+                    <option value="a0">A0</option>
+                </select>
+                <span class="text-xs text-slate-400 ml-2 border-l border-slate-600 pl-2"><i class="fas fa-retweet mr-1"></i>Orient:</span>
+                <select id="pdfOrientation" class="bg-transparent text-amber-400 text-xs border-none py-1 px-2 outline-none cursor-pointer font-mono font-bold">
+                    <option value="landscape">Land</option>
+                    <option value="portrait">Port</option>
+                </select>
+                <span class="text-xs text-slate-400 ml-2 border-l border-slate-600 pl-2"><i class="fas fa-compress mr-1"></i>Scale:</span>
+                <select id="pdfScale" class="bg-transparent text-white text-xs border-none py-1 px-2 outline-none cursor-pointer font-mono font-bold">
+                    <option value="1" selected>1:1 (Actual)</option>
+                    <option value="fit">Fit to Page</option>
+                </select>
+            </div>
+
+            <div class="flex gap-2 border-l border-slate-700 pl-3">
+                <button onclick="exportDXF()" class="bg-white border border-slate-300 text-slate-800 px-3 py-1.5 rounded text-xs hover:bg-slate-200 transition font-bold shadow-sm flex items-center gap-1"><i class="fas fa-file-code text-blue-600"></i> DXF</button>
+                <button onclick="exportPDF()" class="bg-red-600 text-white px-3 py-1.5 rounded text-xs hover:bg-red-700 transition font-bold shadow-sm flex items-center gap-1"><i class="fas fa-file-pdf"></i> PDF</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="flex flex-1 overflow-hidden relative">
+        <div id="mobileOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden transition-opacity opacity-0"></div>
+
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-80 bg-white border-r border-slate-200 flex flex-col shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:shadow-none lg:z-20 no-print">
+            <div class="flex justify-between items-center p-4 border-b lg:hidden">
+                <h2 class="font-bold text-slate-700">Inputs & Settings</h2>
+                <button onclick="toggleSidebar()" class="text-slate-500 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 space-y-6 pb-20">
+                <div class="md:hidden bg-indigo-50 p-3 rounded border border-indigo-200 shadow-sm mb-4">
+                    <label class="text-xs font-bold text-indigo-700 uppercase tracking-wider block mb-2"><i class="fas fa-print mr-1"></i> Export Settings</label>
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <div>
+                            <label class="input-label">Paper Size</label>
+                            <select id="paperSizeMobile" class="input-field text-xs">
+                                <option value="a4">A4</option><option value="a3">A3</option><option value="a2">A2</option><option value="a1">A1</option><option value="a0">A0</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="input-label">Orientation</label>
+                            <select id="pdfOrientationMobile" class="input-field text-xs">
+                                <option value="landscape">Landscape</option><option value="portrait">Portrait</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="input-label">Scale</label>
+                        <select id="pdfScaleMobile" class="input-field text-xs">
+                            <option value="1" selected>1:1 (Actual)</option><option value="fit">Fit to Page</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mt-2 pt-2 border-t border-indigo-200">
+                        <label class="flex items-center cursor-pointer group">
+                            <input type="checkbox" id="halfPlateMobile" class="w-4 h-4 accent-indigo-600 rounded border-gray-300" onchange="toggleHalf('halfPlateMobile')">
+                            <span class="ml-2 text-xs font-bold text-indigo-800 transition">Print Half Plate (ครึ่งแผ่น)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="bg-white p-0 rounded-lg mb-2">
+                    <label class="input-label mb-2 text-slate-700 font-bold uppercase tracking-wider">Calculation Mode</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div id="btn-mode-branch" onclick="setMode('branch')" class="cursor-pointer border-2 rounded-lg p-3 flex flex-col items-center justify-center transition-all duration-200 relative overflow-hidden group border-amber-500 bg-amber-50 shadow-sm ring-1 ring-amber-500 ring-offset-1">
+                            <div class="absolute top-0 right-0 p-1 opacity-100 transition-opacity check-mark text-amber-600"><i class="fas fa-check-circle text-sm"></i></div>
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-colors bg-amber-200 icon-bg"><i class="fas fa-code-branch text-lg text-amber-700 icon-i"></i></div>
+                            <span class="text-xs font-bold text-amber-800 label-text">Branch Cut</span>
+                        </div>
+                        <div id="btn-mode-hole" onclick="setMode('hole')" class="cursor-pointer border-2 rounded-lg p-3 flex flex-col items-center justify-center transition-all duration-200 relative overflow-hidden group border-slate-200 hover:border-slate-300 bg-white">
+                            <div class="absolute top-0 right-0 p-1 opacity-0 transition-opacity check-mark"><i class="fas fa-check-circle text-sm"></i></div>
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-colors bg-slate-100 icon-bg"><i class="fas fa-dot-circle text-lg text-slate-400 icon-i"></i></div>
+                            <span class="text-xs font-bold text-slate-600 label-text">Main Hole</span>
+                        </div>
+                    </div>
+                    
+                    <div id="hole-options" class="hidden border-t border-slate-200 pt-3 mt-4">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase block mb-2">Hole Sizing Type</label>
+                        <div class="flex items-center gap-4 bg-slate-50 p-2 rounded border border-slate-100">
+                            <label class="flex items-center cursor-pointer"><input type="radio" name="holeType" value="od" checked class="w-4 h-4 accent-amber-600" onchange="updateAll()"><span class="ml-2 text-xs font-semibold text-slate-700">Fit OD</span></label>
+                            <label class="flex items-center cursor-pointer"><input type="radio" name="holeType" value="id" class="w-4 h-4 accent-amber-600" onchange="updateAll()"><span class="ml-2 text-xs font-semibold text-slate-700">Fit ID</span></label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-l-4 border-slate-500 pl-3">
+                    <h3 class="text-sm font-bold text-slate-800 mb-2">1. Main Pipe</h3>
+                    <div class="grid grid-cols-2 gap-3 mb-2">
+                        <div><label class="input-label">OD (mm)</label><input type="number" id="mainOD" value="76.3" class="input-field" onchange="updateAll()"></div>
+                        <div><label class="input-label">Thickness</label><input type="number" id="mainThk" value="3.2" class="input-field" onchange="updateAll()"></div>
+                    </div>
+                </div>
+
+                <div class="border-l-4 border-amber-500 pl-3">
+                    <h3 class="text-sm font-bold text-amber-700 mb-2">2. Branch Pipe</h3>
+                    <div class="grid grid-cols-2 gap-3 mb-2">
+                        <div><label class="input-label">OD (mm)</label><input type="number" id="b1OD" value="60.5" class="input-field" onchange="updateAll()"></div>
+                        <div><label class="input-label">Thickness</label><input type="number" id="b1Thk" value="2.3" class="input-field" onchange="updateAll()"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mb-2">
+                        <div><label class="input-label">Angle (°)</label><input type="number" id="b1Ang" value="90" class="input-field" onchange="updateAll()"></div>
+                        <div><label class="input-label text-purple-600">Offset (mm)</label><input type="number" id="b1Offset" value="0" class="input-field border-purple-200 bg-purple-50 font-bold text-purple-700" onchange="updateAll()"></div>
+                    </div>
+                    
+                    <div id="branch-fit-options" class="mt-3 pt-2 border-t border-dashed border-amber-200">
+                        <label class="text-[10px] font-bold text-amber-700 uppercase block mb-2">Branch Fit Type</label>
+                        <div class="flex flex-col gap-2 bg-amber-50 p-2 rounded border border-amber-100">
+                            <label class="flex items-center cursor-pointer"><input type="radio" name="branchFitType" value="od" class="w-4 h-4 accent-amber-600" onchange="updateAll()"><span class="ml-2 text-xs font-semibold text-slate-700">Fit OD (แหลมบาง)</span></label>
+                            <label class="flex items-center cursor-pointer"><input type="radio" name="branchFitType" value="mean" class="w-4 h-4 accent-amber-600" onchange="updateAll()"><span class="ml-2 text-xs font-semibold text-slate-700">Mean</span></label>
+                            <label class="flex items-center cursor-pointer"><input type="radio" name="branchFitType" value="id" checked class="w-4 h-4 accent-amber-600" onchange="updateAll()"><span class="ml-2 text-xs font-bold text-amber-700">Fit ID (ลดปลายแหลม)</span></label>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 pt-2 border-t border-dashed border-amber-200">
+                        <label class="input-label text-amber-800">Divisions / Segments</label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" id="manualDivs" value="24" min="4" step="2" class="input-field text-sm font-bold text-amber-700 bg-amber-50 border-amber-200" onchange="updateAll()">
+                            <span class="text-xs text-slate-400">pts</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 p-3 rounded border border-gray-200">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="input-label text-slate-600">Fine Tune Rotate</label><span class="text-[10px] text-slate-500" id="seam-val">0°</span>
+                    </div>
+                    <input type="range" id="seamAngle" min="180" max="360" step="5" value="0" class="w-full h-1 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-slate-600" oninput="document.getElementById('seam-val').innerText = this.value + '°'; updateAll()">
+                    
+                    <div class="mt-3 pt-2 border-t border-gray-200 flex justify-between items-center">
+                        <label class="input-label">Ref. Line Offset</label>
+                        <input type="number" id="baseOffset" value="50" class="input-field w-20 text-center" onchange="updateAll()">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="w-full p-4 bg-white border-t border-slate-200 shrink-0">
+                <button onclick="updateAll(); if(window.innerWidth < 1024) toggleSidebar();" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded shadow-lg transition flex justify-center items-center gap-2 font-bold text-sm">
+                    <i class="fas fa-sync-alt"></i> Recalculate
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col bg-slate-50 relative overflow-hidden w-full">
+            
+            <div class="bg-white border-b border-slate-200 flex px-2 shadow-sm z-10 no-print overflow-x-auto scrollbar-hide">
+                <div class="tab-btn active" onclick="switchTab('3d', this)"><i class="fas fa-cube mr-2"></i>3D Preview</div>
+                <div class="tab-btn" onclick="switchTab('pattern', this)"><i class="fas fa-ruler-combined mr-2"></i>2D Layout & Blueprint</div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-2 md:p-6 relative">
+                
+                <!-- 3D View -->
+                <div id="tab-3d" class="tab-content h-full flex flex-col print-area">
+                    <div id="3d-container" class="w-full h-[60vh] min-h-[400px] bg-slate-900 rounded-lg shadow-inner overflow-hidden relative border border-slate-700">
+                        <div class="absolute top-3 left-3 z-10 bg-black/60 text-white text-[10px] px-3 py-2 rounded backdrop-blur pointer-events-none font-mono">
+                            <div id="mode-indicator" class="font-bold text-amber-400 mb-1">MODE: BRANCH CUT</div>
+                            Interact: 1 Finger Rotate / 2 Fingers Pan
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2D Pattern -->
+                <div id="tab-pattern" class="tab-content hidden flex flex-col h-full print-area">
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-3 no-print">
+                        <div class="flex justify-between items-center mb-2">
+                             <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fas fa-pencil-ruler text-blue-500"></i> Blueprint Marking Guide
+                            </h2>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                            <div class="bg-slate-50 p-2 rounded border border-slate-200">
+                                <span class="block text-slate-500 font-semibold uppercase">1. เส้นรอบวง</span>
+                                <span id="info-circum" class="text-lg font-mono font-bold text-slate-800">-</span>
+                                <span class="text-slate-400 ml-1">mm</span>
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded border border-slate-200">
+                                <span class="block text-slate-500 font-semibold uppercase">2. แบ่งช่องละ</span>
+                                <span id="info-spacing" class="text-lg font-mono font-bold text-blue-600">-</span>
+                                <span class="text-slate-400 ml-1">mm</span>
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded border border-slate-200">
+                                <span class="block text-slate-500 font-semibold uppercase">3. จำนวนจุด</span>
+                                <span id="info-points" class="text-lg font-mono font-bold text-slate-800">-</span>
+                                <span class="text-slate-400 ml-1">Div</span>
+                            </div>
+                            <div class="bg-red-50 p-2 rounded border border-red-200">
+                                <span class="block text-red-600 font-semibold uppercase">4. ขอบถึง Center</span>
+                                <span id="info-center-dist" class="text-lg font-mono font-bold text-red-700">-</span>
+                                <span class="text-red-400 ml-1">mm</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3 text-xs text-slate-600 bg-blue-50 p-2 rounded border border-blue-100 flex items-start gap-2">
+                            <i class="fas fa-info-circle text-blue-500 mt-0.5"></i>
+                            <p><strong>การวัดวาดมือบนท่อ:</strong> ไม่ต้องเปิดตารางดู! สามารถใช้ <strong>ตัวเลขสีเขียวด้านล่าง</strong> ในการดึงตลับเมตรแนวขวาง และ <strong>ตัวเลขสีแดงด้านบน</strong> วัดความสูงรอยตัดที่จุดนั้นได้ทันที</p>
+                        </div>
+                    </div>
+                    
+                    <div id="graph" class="flex-1 w-full bg-white rounded-lg shadow-sm border border-slate-200 min-h-[500px]"></div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let scene, camera, renderer, controls, meshMain, meshBranch, gridHelper;
+        let currentMode = 'branch'; 
+        let calcData = {};
+
+        function init3D() {
+            const container = document.getElementById('3d-container');
+            scene = new THREE.Scene(); scene.background = new THREE.Color(0x0f172a);
+            
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 10000000);
+            camera.position.set(2000, 1500, 2000); 
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+            
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            
+            scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+            scene.add(new THREE.HemisphereLight( 0xffffff, 0x444444, 0.6 ));
+            
+            gridHelper = new THREE.GridHelper(2000, 20, 0x334155, 0x1e293b);
+            scene.add(gridHelper);
+            
+            animate();
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        }
+        function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            const ov = document.getElementById('mobileOverlay');
+            sb.classList.toggle('-translate-x-full');
+            ov.classList.toggle('hidden'); ov.classList.toggle('opacity-0');
+        }
+
+        function setMode(m) {
+            currentMode = m;
+            const btnBranch = document.getElementById('btn-mode-branch');
+            const btnHole = document.getElementById('btn-mode-hole');
+            const baseClass = "cursor-pointer border-2 rounded-lg p-3 flex flex-col items-center justify-center transition-all duration-200 relative overflow-hidden group";
+            const inactiveClass = "border-slate-200 hover:border-slate-300 bg-white";
+            
+            if (m === 'branch') {
+                btnBranch.className = `${baseClass} border-amber-500 bg-amber-50 shadow-sm ring-1 ring-amber-500 ring-offset-1`;
+                btnBranch.querySelector('.icon-bg').className = "w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-colors bg-amber-200 icon-bg";
+                btnBranch.querySelector('.icon-i').className = "fas fa-code-branch text-lg text-amber-700 icon-i";
+                btnBranch.querySelector('.label-text').className = "text-xs font-bold text-amber-800 label-text";
+                btnBranch.querySelector('.check-mark').className = "absolute top-0 right-0 p-1 opacity-100 transition-opacity text-amber-600 check-mark";
+                
+                btnHole.className = `${baseClass} ${inactiveClass}`;
+                btnHole.querySelector('.icon-bg').className = "w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-colors bg-slate-100 icon-bg";
+                btnHole.querySelector('.icon-i').className = "fas fa-dot-circle text-lg text-slate-400 icon-i";
+                btnHole.querySelector('.label-text').className = "text-xs font-bold text-slate-600 label-text";
+                btnHole.querySelector('.check-mark').className = "absolute top-0 right-0 p-1 opacity-0 transition-opacity check-mark";
+                
+                document.getElementById('mode-indicator').innerText = `MODE: BRANCH PATTERN`;
+                document.getElementById('mode-indicator').className = `font-bold mb-1 text-amber-400`;
+            } else {
+                btnHole.className = `${baseClass} border-teal-500 bg-teal-50 shadow-sm ring-1 ring-teal-500 ring-offset-1`;
+                btnHole.querySelector('.icon-bg').className = "w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-colors bg-teal-200 icon-bg";
+                btnHole.querySelector('.icon-i').className = "fas fa-dot-circle text-lg text-teal-700 icon-i";
+                btnHole.querySelector('.label-text').className = "text-xs font-bold text-teal-800 label-text";
+                btnHole.querySelector('.check-mark').className = "absolute top-0 right-0 p-1 opacity-100 transition-opacity text-teal-600 check-mark";
+
+                btnBranch.className = `${baseClass} ${inactiveClass}`;
+                btnBranch.querySelector('.icon-bg').className = "w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-colors bg-slate-100 icon-bg";
+                btnBranch.querySelector('.icon-i').className = "fas fa-code-branch text-lg text-slate-400 icon-i";
+                btnBranch.querySelector('.label-text').className = "text-xs font-bold text-slate-600 label-text";
+                btnBranch.querySelector('.check-mark').className = "absolute top-0 right-0 p-1 opacity-0 transition-opacity check-mark";
+                
+                document.getElementById('mode-indicator').innerText = `MODE: HOLE TEMPLATE`;
+                document.getElementById('mode-indicator').className = `font-bold mb-1 text-teal-400`;
+            }
+
+            document.getElementById('hole-options').style.display = m==='hole' ? 'block' : 'none';
+            document.getElementById('branch-fit-options').style.display = m==='branch' ? 'block' : 'none';
+            updateAll();
+        }
+
+        function toggleHalf(sourceId) {
+            const isChecked = document.getElementById(sourceId).checked;
+            if(document.getElementById('halfPlate')) document.getElementById('halfPlate').checked = isChecked;
+            if(document.getElementById('halfPlateMobile')) document.getElementById('halfPlateMobile').checked = isChecked;
+            updateAll();
+        }
+
+        function updateAll() {
+            const mOD = parseFloat(document.getElementById('mainOD').value) || 100;
+            const mThk = parseFloat(document.getElementById('mainThk').value) || 0;
+            const bOD = parseFloat(document.getElementById('b1OD').value) || 50;
+            const bThk = parseFloat(document.getElementById('b1Thk').value) || 0;
+            const bAng = parseFloat(document.getElementById('b1Ang').value) || 90;
+            const offset = parseFloat(document.getElementById('b1Offset').value) || 0;
+            const manualDivs = parseInt(document.getElementById('manualDivs').value) || 24;
+            const holeType = document.querySelector('input[name="holeType"]:checked').value;
+            const branchFitTypeEle = document.querySelector('input[name="branchFitType"]:checked');
+            const branchFitType = branchFitTypeEle ? branchFitTypeEle.value : 'id';
+            
+            let rawSeam = parseFloat(document.getElementById('seamAngle').value);
+            if(isNaN(rawSeam)) rawSeam = 180; 
+            const seamShift = rawSeam * Math.PI / 180;
+            const baseOffset = parseFloat(document.getElementById('baseOffset').value) || 50;
+            const isHalf = document.getElementById('halfPlate').checked || (document.getElementById('halfPlateMobile') && document.getElementById('halfPlateMobile').checked);
+
+            if(currentMode === 'branch') {
+                let r_cut_branch = bOD/2;
+                if (branchFitType === 'id') r_cut_branch = (bOD/2) - bThk;
+                else if (branchFitType === 'mean') r_cut_branch = (bOD/2) - (bThk/2);
+                calcData = calcBranchPattern(mOD/2, bOD/2, r_cut_branch, bAng, -offset, manualDivs, seamShift, baseOffset);
+            } else {
+                const cuttingRad = (holeType === 'od') ? bOD/2 : (bOD/2 - bThk);
+                calcData = calcHolePattern(mOD/2, cuttingRad, bAng, -offset, manualDivs, seamShift, baseOffset);
+            }
+            
+            if (isHalf) {
+                const halfCurveIdx = Math.floor(calcData.x.length / 2) + 1;
+                calcData.x = calcData.x.slice(0, halfCurveIdx);
+                calcData.y = calcData.y.slice(0, halfCurveIdx);
+                
+                const halfMarkIdx = Math.floor(calcData.markX.length / 2) + 1;
+                calcData.markX = calcData.markX.slice(0, halfMarkIdx);
+                calcData.markY = calcData.markY.slice(0, halfMarkIdx);
+                
+                if (calcData.centerX !== undefined && calcData.centerX > calcData.markX[calcData.markX.length - 1] + 0.1) calcData.centerX = undefined;
+            }
+            calcData.isHalf = isHalf;
+
+            document.getElementById('info-circum').innerText = calcData.circum.toFixed(1) + (isHalf ? ' (Half)' : '');
+            document.getElementById('info-points').innerText = manualDivs;
+            document.getElementById('info-spacing').innerText = (calcData.circum / manualDivs).toFixed(2);
+            if (calcData.centerX !== undefined) document.getElementById('info-center-dist').innerText = calcData.centerX.toFixed(1);
+            else document.getElementById('info-center-dist').innerText = '-';
+
+            update3D(mOD, bOD, bAng, offset, calcData, currentMode, holeType, bThk, mThk, branchFitType);
+            renderGraph(calcData);
+        }
+
+        function getBranchCutLength(theta, R, r, E, angRad) {
+            const Z_term = E + r * Math.sin(theta);
+            if (Math.abs(Z_term) >= R) return 0; 
+            const sinA = Math.sin(angRad), cosA = Math.cos(angRad);
+            const termSq = Math.sqrt(R*R - Z_term*Z_term);
+            const K1 = r * Math.cos(theta) * cosA;
+            return (termSq - K1) / sinA;
+        }
+
+        function calcBranchPattern(R, r_out, r_cut, angDeg, E, seg, shift, baseOffset) {
+            const angRad = angDeg * Math.PI / 180;
+            let xPts=[], yPts=[], markX=[], markY=[];
+            const circum = 2 * Math.PI * r_out;
+            const curveRes = 360; 
+
+            for(let i=0; i<=curveRes; i++) {
+                let theta = (i/curveRes)*2*Math.PI + shift; 
+                xPts.push(i * circum/curveRes);
+                yPts.push(getBranchCutLength(theta, R, r_cut, E, angRad));
+            }
+
+            for(let i=0; i<=seg; i++) {
+                let theta = (i/seg)*2*Math.PI + shift; 
+                markX.push(i * circum/seg);
+                markY.push(getBranchCutLength(theta, R, r_cut, E, angRad));
+            }
+            
+            const maxL = Math.max(...yPts.filter(n=>!isNaN(n)));
+            const plotY = yPts.map(y => (maxL - y) + baseOffset);
+            const plotMarkY = markY.map(y => (maxL - y) + baseOffset);
+            
+            let targetTheta = (Math.abs(E) < r_cut) ? Math.asin(-E / r_cut) : 0;
+            let thetaDiff = (targetTheta - shift) % (2 * Math.PI);
+            if(thetaDiff < 0) thetaDiff += 2 * Math.PI;
+            
+            let trueCenterX = (thetaDiff / (2 * Math.PI)) * circum;
+            if (trueCenterX > circum - 0.1) trueCenterX = 0;
+
+            return { x: xPts, y: plotY, markX: markX, markY: plotMarkY, mode: 'Branch Pattern', circum: circum, type: 'Saddle', baseOffset: baseOffset, centerX: trueCenterX }; 
+        }
+
+        function calcHolePattern(R, r_cut, angDeg, E, seg, shift, baseOffset) {
+            const angRad = angDeg * Math.PI / 180;
+            const sinA = Math.sin(angRad), cosA = Math.cos(angRad);
+            let uPts=[], vPts=[], markU=[], markV=[]; 
+            const curveRes = 360;
+
+            const getU = (th) => {
+                const Z = E + r_cut * Math.sin(th);
+                if(Math.abs(Z)>R) return null;
+                return -Math.atan2(Z, Math.sqrt(R*R - Z*Z)) * R;
+            };
+
+            const getV = (th) => {
+                const Z = E + r_cut * Math.sin(th);
+                if(Math.abs(Z)>R) return null;
+                const L = (Math.sqrt(R*R - Z*Z) - r_cut * Math.cos(th) * cosA) / sinA;
+                return L * cosA - r_cut * Math.cos(th) * sinA;
+            };
+
+            for(let i=0; i<=curveRes; i++) {
+                let u = getU((i/curveRes)*2*Math.PI), v = getV((i/curveRes)*2*Math.PI);
+                if(u !== null) { uPts.push(u); vPts.push(v); }
+            }
+            for(let i=0; i<=seg; i++) {
+                let u = getU((i/seg)*2*Math.PI), v = getV((i/seg)*2*Math.PI);
+                if(u !== null) { markU.push(u); markV.push(v); }
+            }
+            
+            let centerOffset = 0;
+            if(uPts.length > 0) {
+                 const minU = Math.min(...uPts);
+                 centerOffset = -minU; 
+                 for(let k=0; k<uPts.length; k++) uPts[k] -= minU;
+                 for(let k=0; k<markU.length; k++) markU[k] -= minU;
+            }
+            
+            const centerV = (Math.max(...vPts) + Math.min(...vPts))/2;
+            return { x: uPts, y: vPts.map(v => v - centerV + baseOffset), markX: markU, markY: markV.map(v => v - centerV + baseOffset), mode: 'Hole Template', circum: 2*Math.PI*R, type: 'Hole', baseOffset: baseOffset, centerX: centerOffset };
+        }
+
+        function update3D(mOD, bOD, ang, off, data, mode, holeType, bThk, mThk, branchFitType) {
+            while(scene.children.length > 0){ 
+                const obj = scene.children[0];
+                if(obj.geometry) obj.geometry.dispose();
+                if(obj.material) { if(Array.isArray(obj.material)) obj.material.forEach(m=>m.dispose()); else obj.material.dispose(); }
+                scene.remove(obj); 
+            }
+            
+            const maxDim = Math.max(mOD, bOD);
+            const sceneSize = maxDim * 4; 
+            
+            scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+            scene.add(new THREE.HemisphereLight( 0xffffff, 0x444444, 0.6 ));
+            
+            const mainLight = new THREE.DirectionalLight(0xffffff, 1); mainLight.position.set(sceneSize/2, sceneSize, sceneSize/2); scene.add(mainLight);
+            const fillLight = new THREE.DirectionalLight(0xa5f3fc, 0.3); fillLight.position.set(-sceneSize/2, sceneSize/4, sceneSize/2); scene.add(fillLight);
+            scene.add(new THREE.GridHelper(Math.max(2000, sceneSize * 1.5), 40, 0x334155, 0x1e293b));
+            
+            if(camera) {
+                const camDist = maxDim * 2.5; camera.position.set(camDist, camDist * 0.8, camDist);
+                camera.lookAt(0,0,0); if(controls) controls.target.set(0,0,0);
+            }
+
+            const mRad = mOD/2; const bRad = bOD/2; const angRad = ang * Math.PI / 180; 
+            const mainLength = Math.max(800, mOD * 2.5, bOD * 3); 
+            const metalMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.5, roughness: 0.6, side: THREE.DoubleSide });
+
+            if(mode === 'hole') {
+                const texSize = Math.min(4096, Math.max(2048, Math.ceil(mOD * 2))); 
+                const canvas = document.createElement('canvas'); canvas.width = texSize; canvas.height = texSize / 2;
+                const ctx = canvas.getContext('2d'); ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, texSize, texSize/2);
+                
+                const r_cut = (holeType === 'od') ? bRad : (bRad - bThk);
+                const pts = [];
+                for(let i=0; i<=360; i++) {
+                    let theta = (i/360)*2*Math.PI; 
+                    const Z = off + r_cut * Math.sin(theta);
+                    if(Math.abs(Z) >= mRad) continue;
+                    const Y = Math.sqrt(mRad*mRad - Z*Z);
+                    const X = ((Y - r_cut * Math.cos(theta) * Math.cos(angRad)) / Math.sin(angRad)) * Math.cos(angRad) - r_cut * Math.cos(theta) * Math.sin(angRad);
+                    const uNorm = Math.atan2(Y, Z) / Math.PI; const vNorm = (mainLength/2 - X) / mainLength; 
+                    if(uNorm >= 0 && uNorm <= 1 && vNorm >= 0 && vNorm <= 1) pts.push({u: uNorm, v: vNorm});
+                }
+                if(pts.length > 2) {
+                    ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.moveTo(pts[0].u * texSize, (1 - pts[0].v) * (texSize/2));
+                    for(let i=1; i<pts.length; i++) ctx.lineTo(pts[i].u * texSize, (1 - pts[i].v) * (texSize/2));
+                    ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#ef4444'; ctx.lineWidth = Math.max(6, mOD/20); ctx.stroke();
+                }
+                const alphaMap = new THREE.CanvasTexture(canvas); alphaMap.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                const matHole = metalMat.clone(); matHole.alphaMap = alphaMap; matHole.alphaTest = 0.5; matHole.transparent = false; matHole.side = THREE.DoubleSide;
+                
+                const radSegs = Math.min(512, Math.max(128, Math.ceil(mOD / 2)));
+                const geoTop = new THREE.CylinderGeometry(mRad, mRad, mainLength, radSegs, 1, true, 0, Math.PI); geoTop.rotateZ(Math.PI/2); scene.add(new THREE.Mesh(geoTop, matHole));
+                const matSolid = metalMat.clone(); matSolid.color = new THREE.Color(0x506070); 
+                const geoBot = new THREE.CylinderGeometry(mRad, mRad, mainLength, radSegs, 1, true, Math.PI, Math.PI); geoBot.rotateZ(Math.PI/2); scene.add(new THREE.Mesh(geoBot, matSolid));
+            } else {
+                const mainMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, metalness: 0.1, roughness: 0.2, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
+                const geoM = new THREE.CylinderGeometry(mRad, mRad, mainLength, Math.min(512, Math.max(128, Math.ceil(mOD / 2))), 1, true); geoM.rotateZ(Math.PI/2); scene.add(new THREE.Mesh(geoM, mainMat));
+            }
+
+            const branchGeo = new THREE.BufferGeometry(); const vertices = [];
+            const r_out = bRad; const r_in = Math.max(0.1, bRad - bThk);
+            function pushQuad(v1, v2, v3, v4) { vertices.push(...v1, ...v2, ...v4); vertices.push(...v2, ...v3, ...v4); }
+            const ringBO = [], ringTO = [], ringTI = [], ringBI = [];
+            const bSegs = Math.min(512, Math.max(128, Math.ceil(bOD / 2)));
+            let r_cut_3d = r_out;
+            if (branchFitType === 'id') r_cut_3d = Math.max(0.1, r_out - bThk);
+            else if (branchFitType === 'mean') r_cut_3d = Math.max(0.1, r_out - bThk/2);
+
+            for(let j=0; j<=bSegs; j++) {
+                const theta = (j/bSegs)*2*Math.PI, ct = Math.cos(theta), st = Math.sin(theta), ca = Math.cos(angRad), sa = Math.sin(angRad);
+                let L_cut = getBranchCutLength(theta, mRad, r_cut_3d, off, angRad); if(isNaN(L_cut)) L_cut = 0;
+                const L_flat = Math.max(350, bOD * 2); 
+                ringBO.push([ L_cut*ca - r_out*ct*sa, L_cut*sa + r_out*ct*ca, off + r_out*st ]);
+                ringTO.push([ L_flat*ca - r_out*ct*sa, L_flat*sa + r_out*ct*ca, off + r_out*st ]);
+                ringTI.push([ L_flat*ca - r_in*ct*sa, L_flat*sa + r_in*ct*ca, off + r_in*st ]);
+                ringBI.push([ L_cut*ca - r_in*ct*sa, L_cut*sa + r_in*ct*ca, off + r_in*st ]);
+            }
+            for(let j=0; j<bSegs; j++) {
+                pushQuad(ringBO[j], ringBO[j+1], ringTO[j+1], ringTO[j]); pushQuad(ringTO[j], ringTO[j+1], ringTI[j+1], ringTI[j]);
+                pushQuad(ringTI[j], ringTI[j+1], ringBI[j+1], ringBI[j]); pushQuad(ringBI[j], ringBI[j+1], ringBO[j+1], ringBO[j]);
+            }
+            branchGeo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3)); branchGeo.computeVertexNormals();
+            let branchMat = (mode === 'hole') 
+                ? new THREE.MeshStandardMaterial({ color: 0x10b981, metalness: 0.1, roughness: 0.2, transparent: true, opacity: 0.15, side: THREE.FrontSide, depthWrite: false }) 
+                : new THREE.MeshStandardMaterial({ color: 0x10b981, metalness: 0.3, roughness: 0.5, side: THREE.DoubleSide });
+            
+            meshBranch = new THREE.Mesh(branchGeo, branchMat);
+            if(mode !== 'hole') { meshBranch.castShadow = true; meshBranch.receiveShadow = true; } scene.add(meshBranch);
+            
+            const linePoints = []; for(let i=0; i<=bSegs; i++) { linePoints.push(new THREE.Vector3(ringBO[i][0], ringBO[i][1], ringBO[i][2])); }
+            meshBranch.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(linePoints), new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 2 })));
+        }
+
+        function renderGraph(d) {
+            const maxX = Math.max(...d.markX);
+            const maxY = Math.max(...d.markY);
+            const title = currentMode === 'branch' ? `Blueprint Template (เส้นรอบวง: ${d.circum.toFixed(1)}mm${d.isHalf ? ' - ครึ่งแผ่น' : ''})` : `Hole Blueprint (รอบวงท่อหลัก: ${d.circum.toFixed(1)}mm${d.isHalf ? ' - ครึ่งแผ่น' : ''})`;
+            const shapes = [];
+            const annotations = [];
+            
+            if(d.centerX !== undefined) {
+                shapes.push({ type: 'line', x0: d.centerX, y0: -30, x1: d.centerX, y1: maxY + 30, line: { color: '#dc2626', width: 2, dash: 'dash' } });
+                annotations.push({ x: d.centerX, y: maxY + 20, text: 'Center', showarrow: false, font: { color: '#dc2626', size: 12, weight: 'bold' } });
+            }
+
+            shapes.push({ type: 'line', x0: 0, x1: maxX, y0: 0, y1: 0, line: { color: 'black', width: 2 } });
+
+            d.markX.forEach((x, i) => {
+                shapes.push({ type: 'line', x0: x, y0: 0, x1: x, y1: d.markY[i], line: { color: '#22c55e', width: 1, dash: 'dot' } });
+            });
+
+            const traceCurve = { x: d.x, y: d.y, mode: 'lines', fill: 'tozeroy', line: { color: '#2563eb', width: 2 }, fillcolor: 'rgba(59, 130, 246, 0.1)', hoverinfo: 'none' };
+            const traceMarks = { x: d.markX, y: d.markY, mode: 'markers', marker: { size: 6, color: '#1e40af' }, hovertemplate: '<b>ระยะดึง X:</b> %{x:.1f} mm<br><b>ความสูง Y:</b> %{y:.1f} mm<extra></extra>' };
+
+            d.markX.forEach((x, i) => {
+                annotations.push({ x: x, y: -8, text: `${x.toFixed(1)}`, showarrow: false, font: { size: 11, color: '#16a34a' }, textangle: -90, xanchor: 'center', yanchor: 'top' });
+            });
+
+            d.markX.forEach((x, i) => {
+                annotations.push({ x: x, y: d.markY[i] + 8, text: `${d.markY[i].toFixed(1)}`, showarrow: false, font: { size: 11, color: '#ef4444' }, textangle: -90, xanchor: 'center', yanchor: 'bottom' });
+            });
+
+            const layout = { 
+                title: { text: title, font: { size: 14, color: '#334155' } }, 
+                xaxis: { title: '', zeroline: false, showgrid: false, showticklabels: false, range: [-maxX*0.05, maxX*1.05] }, 
+                yaxis: { title: 'ความสูง Y (mm)', scaleanchor: "x", scaleratio: 1, gridcolor: '#e2e8f0', zeroline: false, showgrid: false, range: [-40, maxY + 40] }, 
+                margin: { t: 50, l: 50, r: 20, b: 30 }, shapes: shapes, annotations: annotations, hovermode: 'closest', plot_bgcolor: '#ffffff',
+            };
+
+            Plotly.newPlot('graph', [traceCurve, traceMarks], layout, {displayModeBar: false, responsive: true});
+        }
+
+        async function saveFile(blob, filename, description, mimeType, extension) {
+            if ('showSaveFilePicker' in window) {
+                try {
+                    const handle = await window.showSaveFilePicker({ suggestedName: filename, types: [{ description: description, accept: { [mimeType]: [extension] } }] });
+                    const writable = await handle.createWritable(); await writable.write(blob); await writable.close(); return; 
+                } catch (err) { if (err.name === 'AbortError') return; }
+            }
+            const blobUrl = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = blobUrl; link.download = filename; link.target = '_blank'; document.body.appendChild(link);
+            setTimeout(() => { link.click(); setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(blobUrl); }, 200); }, 10);
+        }
+
+        async function exportPDF() {
+            if(!calcData || !calcData.x) return;
+            if(!window.jspdf) { alert("Error: PDF Library not loaded."); return; }
+            const d = calcData; const { jsPDF } = window.jspdf;
+            
+            const getVal = (id) => { const el = document.getElementById(id), elMobile = document.getElementById(id + 'Mobile'); return (window.innerWidth < 768 && elMobile) ? elMobile.value : (el ? el.value : (elMobile ? elMobile.value : null)); };
+            const pSize = getVal('paperSize'), orientation = getVal('pdfOrientation') || 'landscape', scaleMode = getVal('pdfScale');
+            const doc = new jsPDF({ orientation: orientation, unit:'mm', format: pSize });
+            
+            let pageH, pageW; const dims = { 'a4': [210, 297], 'a3': [297, 420], 'a2': [420, 594], 'a1': [594, 841], 'a0': [841, 1189] }; const sizeDim = dims[pSize] || [210, 297];
+            if (orientation === 'landscape') { pageH = Math.min(sizeDim[0], sizeDim[1]); pageW = Math.max(sizeDim[0], sizeDim[1]); } 
+            else { pageH = Math.max(sizeDim[0], sizeDim[1]); pageW = Math.min(sizeDim[0], sizeDim[1]); }
+            
+            const totalW = Math.max(...d.markX), maxY = Math.max(...d.y), minY = Math.min(...d.y);
+            const contentHeight = (maxY - minY) + 60, contentWidth = totalW + 30; 
+
+            let scale = 1, scaleText = "1:1"; 
+            if (scaleMode === 'fit') { scale = Math.min((pageW - 30) / contentWidth, (pageH - 50) / contentHeight); scaleText = `Fit (${(scale*100).toFixed(1)}%)`; } 
+            else { scale = parseFloat(scaleMode); scaleText = scale === 1 ? "1:1" : `1:${1/scale}`; }
+            
+            const startX = (pageW - (totalW * scale)) / 2;
+            let pdfBaseRefY = (pageH / 2) + (((maxY + minY) / 2) * scale);
+            if (pdfBaseRefY - (maxY * scale) < 40) pdfBaseRefY = 40 + (maxY * scale);
+            const toPDF = (x, y) => ({ x: startX + (x * scale), y: pdfBaseRefY - (y * scale) });
+
+            doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text(`Pipe Pattern Pro - ${currentMode.toUpperCase()}`, 15, 15); doc.setFontSize(10); doc.setFont("helvetica", "normal"); 
+            doc.text(`Main: ${document.getElementById('mainOD').value}mm | Branch: ${document.getElementById('b1OD').value}mm | Angle: ${document.getElementById('b1Ang').value}deg | Scale: ${scaleText}${d.isHalf ? ' (HALF PLATE)' : ''}`, 15, 22);
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 27);
+            
+            doc.setLineWidth(0.5); doc.setDrawColor(0); const pBL = toPDF(0, 0), pBR = toPDF(totalW, 0); doc.line(pBL.x, pBL.y, pBR.x, pBR.y); doc.setFontSize(8); doc.text("Base Line (Wrap around pipe)", pBL.x, pBL.y - 2); 
+
+            doc.setFontSize(7); let lastX_Row1 = -999, lastY_Label_X = -999, lastY_Label_Y = -999, yStagger = 0; 
+            for(let i=0; i < d.markX.length; i++) {
+                const ptCurve = toPDF(d.markX[i], d.markY[i]), ptBase = toPDF(d.markX[i], 0);
+                
+                // วาดเส้นปะแนวตั้งสีเขียวอ่อน ให้เหมือน 2D Blueprint
+                doc.setDrawColor(34, 197, 94); // สีเขียว
+                doc.setLineWidth(0.2); 
+                doc.setLineDash([1, 1], 0); 
+                doc.line(ptBase.x, ptBase.y, ptCurve.x, ptCurve.y);
+                doc.setLineDash([], 0); // รีเซ็ตเส้นกลับเป็นปกติ
+                
+                // วาดเส้นโยงไปหา Center (เส้นนอน) ด้วยสีเทาอ่อน
+                if(d.centerX !== undefined) {
+                    doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.1);
+                    doc.line(ptCurve.x, ptCurve.y, toPDF(d.centerX, d.markY[i]).x, toPDF(d.centerX, d.markY[i]).y);
+                }
+                
+                // ตัวเลขบอกระยะ X (สีเขียว) เลื่อนลงมาไม่ให้ทับเส้นฐาน
+                doc.setTextColor(0, 100, 0); 
+                let rowY = ptBase.y + 7; // เลื่อนตัวเลขลง
+                if (Math.abs(ptBase.x - lastX_Row1) < 3.5) rowY += 8; else lastX_Row1 = ptBase.x;
+                doc.text(d.markX[i].toFixed(1), ptBase.x + 1, rowY, { angle: 90 });
+                
+                // ตัวเลขบอกความสูง Y เปลี่ยนเป็นสีแดงให้เหมือน 2D
+                doc.setTextColor(239, 68, 68); 
+                let yOffset = -2; 
+                if (Math.hypot(ptCurve.x - lastY_Label_X, ptCurve.y - lastY_Label_Y) < 5) yStagger = (yStagger + 1) % 3; else yStagger = 0;
+                yOffset -= (yStagger * 6); 
+                doc.text(d.markY[i].toFixed(1), ptCurve.x + 1, ptCurve.y + yOffset, { angle: 90 });
+                lastY_Label_X = ptCurve.x; lastY_Label_Y = ptCurve.y;
+            }
+
+            if(d.centerX !== undefined) {
+                const pTC_Top = toPDF(d.centerX, maxY + 10), pTC_Bottom_Y = pBL.y + 30; 
+                doc.setDrawColor(220, 38, 38); doc.setLineWidth(0.5); doc.setLineDash([5, 3], 0); doc.line(pTC_Top.x, pTC_Bottom_Y, pTC_Top.x, pTC_Top.y); 
+                const pStart = toPDF(0, 0), pCenterBase = toPDF(d.centerX, 0), dimY = pTC_Bottom_Y - 5; 
+                if (Math.abs(pCenterBase.x - pStart.x) > 5) {
+                    doc.setLineDash([], 0); doc.setDrawColor(0); doc.setLineWidth(0.2); doc.line(pStart.x, dimY, pCenterBase.x, dimY);
+                    doc.line(pStart.x, dimY, pStart.x + 2, dimY - 1); doc.line(pStart.x, dimY, pStart.x + 2, dimY + 1); doc.line(pCenterBase.x, dimY, pCenterBase.x - 2, dimY - 1); doc.line(pCenterBase.x, dimY, pCenterBase.x - 2, dimY + 1);
+                    doc.setFontSize(8); doc.setTextColor(0); doc.text(`${d.centerX.toFixed(1)} mm`, (pStart.x + pCenterBase.x) / 2, dimY - 1, { align: "center" });
+                }
+                doc.setTextColor(220, 38, 38); doc.setFontSize(9); doc.text("TRUE MAIN CENTER", pTC_Top.x + 2, pTC_Top.y + 5, { angle: 90 }); doc.setLineDash([], 0); doc.setTextColor(0);
+            }
+
+            const pts = d.x.map((x,i) => toPDF(x, d.y[i])); doc.setLineWidth(0.5); doc.setDrawColor(200, 0, 0); 
+            for(let i=0; i<pts.length-1; i++) doc.line(pts[i].x, pts[i].y, pts[i+1].x, pts[i+1].y); 
+            
+            doc.setDrawColor(0); doc.setLineWidth(0.2); doc.line(pBL.x, pBL.y, pts[0].x, pts[0].y); doc.line(pBR.x, pBR.y, pts[pts.length-1].x, pts[pts.length-1].y); 
+            doc.setFontSize(8); doc.setTextColor(0); 
+            doc.text("Legend: Red Dash = True Center | Red = Cut Height (Y) | Green = Tape Measure (X) | Green Dash = Projection Lines", 15, pageH - 10);
+            
+            doc.save(`pattern_${currentMode}_${d.isHalf?'HALF_':''}${scaleText.replace(/[:\s\(\)%]/g, '-')}.pdf`); 
+        }
+
+        async function exportDXF() {
+            if(!calcData || !calcData.x) return;
+            let d = calcData, w = Math.max(...d.markX), dxf = '0\nSECTION\n2\nENTITIES\n';
+            const l = (x1,y1,x2,y2,lay) => `0\nLINE\n8\n${lay}\n10\n${x1.toFixed(3)}\n20\n${y1.toFixed(3)}\n11\n${x2.toFixed(3)}\n21\n${y2.toFixed(3)}\n`;
+            for(let i=0; i<d.x.length-1; i++) dxf += l(d.x[i], d.y[i], d.x[i+1], d.y[i+1], 'CUT_LINE'); 
+            dxf += l(0, 0, w, 0, 'FRAME'); dxf += l(0, 0, 0, d.y[0], 'FRAME'); dxf += l(w, 0, w, d.y[d.y.length-1], 'FRAME'); 
+            if(d.centerX !== undefined) {
+                 const maxY = Math.max(...d.y), lowerBound = Math.min(Math.min(...d.y), 0) - 50; dxf += l(d.centerX, lowerBound, d.centerX, maxY + 10, 'CENTER_LINE');
+                 dxf += l(0, lowerBound + 10, d.centerX, lowerBound + 10, 'DIMENSION'); dxf += l(0, lowerBound + 8, 0, lowerBound + 12, 'DIMENSION'); dxf += l(d.centerX, lowerBound + 8, d.centerX, lowerBound + 12, 'DIMENSION');
+            }
+            for(let i=0; i<d.markX.length; i++) dxf += l(d.markX[i], 0, d.markX[i], 5, 'TICKS'); 
+            dxf += '0\nENDSEC\n0\nEOF\n'; const blob = new Blob([dxf], { type: 'application/dxf' }); await saveFile(blob, `pattern_${currentMode}${d.isHalf?'_HALF':''}.dxf`, 'DXF File', 'application/dxf', '.dxf');
+        }
+
+        function switchTab(id, btn) {
+            document.querySelectorAll('.tab-content').forEach(e=>e.classList.add('hidden')); document.getElementById('tab-'+id).classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); if(id !== '3d') Plotly.relayout('graph', {autosize: true});
+        }
+        window.onload = () => { init3D(); setTimeout(updateAll, 500); };
+    </script>
+</body>
+</html>

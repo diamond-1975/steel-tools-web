@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pipe to Plate Patern (Blueprint Setup)</title>
+    
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&family=Roboto+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+        .mono { font-family: 'Roboto Mono', monospace; }
+        .input-label { font-size: 0.75rem; color: #475569; font-weight: 600; margin-bottom: 2px; display: block; text-transform: uppercase; }
+        .input-field { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 1rem; transition: all 0.2s; background-color: #fff; }
+        @media (min-width: 768px) { .input-field { padding: 6px 10px; font-size: 0.9rem; } }
+        .input-field:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); }
+        .tab-btn { cursor: pointer; padding: 10px 15px; font-size: 0.9rem; color: #64748b; border-bottom: 3px solid transparent; transition: all 0.2s; font-weight: 500; white-space: nowrap; }
+        .tab-btn:hover { color: #334155; background: #f1f5f9; }
+        .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; background: #eff6ff; font-weight: 700; }
+        @media print {
+            body * { visibility: hidden; }
+            .print-area, .print-area * { visibility: visible; }
+            .print-area { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+            .no-print { display: none !important; }
+        }
+        input[type="radio"], input[type="checkbox"] {
+            -webkit-appearance: auto !important;
+            -moz-appearance: auto !important;
+            appearance: auto !important;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden text-slate-800">
+
+    <!-- Navbar -->
+    <nav class="bg-slate-900 text-white h-14 flex justify-between items-center px-4 shrink-0 z-30 shadow-md no-print">
+        <div class="flex items-center gap-3">
+            <button onclick="toggleSidebar()" class="lg:hidden text-slate-300 hover:text-white focus:outline-none">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+            <div class="bg-blue-600 w-8 h-8 rounded flex items-center justify-center shadow-lg text-white"><i class="fas fa-shapes"></i></div>
+            <div class="hidden sm:block">
+                <h1 class="text-base font-bold leading-none">Pipe to Plate Pattern <span class="text-blue-400 text-[10px] ml-1 uppercase tracking-wider font-mono">Miter</span></h1>
+                <p class="text-slate-400 text-[10px]">Blueprint Setup & 3D Feature</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-3">
+             <div class="hidden md:flex items-center gap-2 bg-slate-800 rounded px-2 py-1 border border-slate-700">
+                <label class="flex items-center cursor-pointer border-r border-slate-600 pr-2 mr-1" title="พิมพ์ครึ่งแผ่น">
+                    <input type="checkbox" id="halfPlate" class="w-3.5 h-3.5 accent-blue-500 rounded" onchange="toggleHalf('halfPlate')">
+                    <span class="ml-1.5 text-xs text-blue-400 font-bold whitespace-nowrap">Half Plate</span>
+                </label>
+
+                <span class="text-xs text-slate-400"><i class="fas fa-file-pdf mr-1"></i>Size:</span>
+                <select id="paperSize" class="bg-transparent text-white text-xs border-none py-1 px-2 outline-none cursor-pointer font-mono">
+                    <option value="a4">A4</option>
+                    <option value="a3">A3</option>
+                    <option value="a2">A2</option>
+                    <option value="a1">A1</option>
+                    <option value="a0">A0</option>
+                </select>
+                <span class="text-xs text-slate-400 ml-2 border-l border-slate-600 pl-2"><i class="fas fa-retweet mr-1"></i>Orient:</span>
+                <select id="pdfOrientation" class="bg-transparent text-blue-400 text-xs border-none py-1 px-2 outline-none cursor-pointer font-mono font-bold">
+                    <option value="landscape">Land</option>
+                    <option value="portrait">Port</option>
+                </select>
+                <span class="text-xs text-slate-400 ml-2 border-l border-slate-600 pl-2"><i class="fas fa-compress mr-1"></i>Scale:</span>
+                <select id="pdfScale" class="bg-transparent text-white text-xs border-none py-1 px-2 outline-none cursor-pointer font-mono font-bold">
+                    <option value="1" selected>1:1 (Actual)</option>
+                    <option value="fit">Fit to Page</option>
+                </select>
+            </div>
+
+            <div class="flex gap-2 border-l border-slate-700 pl-3">
+                <button onclick="exportDXF()" class="bg-white border border-slate-300 text-slate-800 px-3 py-1.5 rounded text-xs hover:bg-slate-200 transition font-bold shadow-sm flex items-center gap-1"><i class="fas fa-file-code text-blue-600"></i> DXF</button>
+                <button onclick="exportPDF()" class="bg-red-600 text-white px-3 py-1.5 rounded text-xs hover:bg-red-700 transition font-bold shadow-sm flex items-center gap-1"><i class="fas fa-file-pdf"></i> PDF</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="flex flex-1 overflow-hidden relative">
+        <div id="mobileOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden transition-opacity opacity-0"></div>
+
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-80 bg-white border-r border-slate-200 flex flex-col shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:shadow-none lg:z-20 no-print">
+            <div class="flex justify-between items-center p-4 border-b lg:hidden">
+                <h2 class="font-bold text-slate-700">Inputs & Settings</h2>
+                <button onclick="toggleSidebar()" class="text-slate-500 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 space-y-5 pb-20">
+                
+                <!-- Mobile Export Settings -->
+                <div class="md:hidden bg-blue-50 p-3 rounded border border-blue-200 shadow-sm mb-4">
+                    <label class="text-xs font-bold text-blue-700 uppercase tracking-wider block mb-2"><i class="fas fa-print mr-1"></i> Export Settings</label>
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <div>
+                            <label class="input-label">Paper Size</label>
+                            <select id="paperSizeMobile" class="input-field text-xs">
+                                <option value="a4">A4</option><option value="a3">A3</option><option value="a2">A2</option><option value="a1">A1</option><option value="a0">A0</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="input-label">Orientation</label>
+                            <select id="pdfOrientationMobile" class="input-field text-xs">
+                                <option value="landscape">Landscape</option><option value="portrait">Portrait</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="input-label">Scale</label>
+                        <select id="pdfScaleMobile" class="input-field text-xs">
+                            <option value="1" selected>1:1 (Actual)</option><option value="fit">Fit to Page</option>
+                        </select>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-blue-200">
+                        <label class="flex items-center cursor-pointer group">
+                            <input type="checkbox" id="halfPlateMobile" class="w-4 h-4 accent-blue-600 rounded border-gray-300" onchange="toggleHalf('halfPlateMobile')">
+                            <span class="ml-2 text-xs font-bold text-blue-800 transition">Print Half Plate (ครึ่งแผ่น)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Section 1: Pipe Data -->
+                <div class="border-l-4 border-emerald-500 pl-3">
+                    <h3 class="text-sm font-bold text-emerald-700 mb-3 flex items-center gap-2">
+                        <i class="fas fa-ruler"></i> Pipe Dimensions
+                    </h3>
+                    <div class="mb-3">
+                        <label class="input-label">Nominal Size (Optional)</label>
+                        <select id="pipeNPS" class="input-field font-mono text-sm mb-2" onchange="autoFillPipe()">
+                            <option value="custom">Custom Size</option>
+                            <option value="2">2" (DN50)</option>
+                            <option value="3">3" (DN80)</option>
+                            <option value="4" selected>4" (DN100)</option>
+                            <option value="6">6" (DN150)</option>
+                            <option value="8">8" (DN200)</option>
+                            <option value="10">10" (DN250)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="input-label">Pipe OD (mm)</label>
+                        <input type="number" id="pipeOD" value="114.3" class="input-field text-emerald-700 font-bold" onchange="document.getElementById('pipeNPS').value='custom'; updateAll();">
+                    </div>
+                </div>
+
+                <!-- Section 2: Cut Angle -->
+                <div class="border-l-4 border-blue-500 pl-3 mt-5">
+                    <h3 class="text-sm font-bold text-blue-700 mb-3 flex items-center gap-2">
+                        <i class="fas fa-cut"></i> Connection
+                    </h3>
+                    <div>
+                        <label class="input-label">Intersection Angle (°)</label>
+                        <input type="number" id="intAngle" value="45" min="1" max="90" class="input-field font-bold text-blue-700" onchange="updateAll()">
+                        <p class="text-[10px] text-slate-400 mt-1">90° = Perpendicular (ตัดตรง), 45° = Miter (เฉียง)</p>
+                    </div>
+                </div>
+
+                <!-- Section 3: Pattern Settings -->
+                <div class="bg-gray-50 p-3 rounded border border-gray-200 mt-5">
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <label class="input-label text-slate-700">Divisions</label>
+                            <input type="number" id="manualDivs" value="24" min="4" step="2" class="input-field font-bold" onchange="updateAll()">
+                        </div>
+                        <div>
+                            <label class="input-label">Base Offset</label>
+                            <input type="number" id="baseOffset" value="50" class="input-field" onchange="updateAll()">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            
+            <div class="w-full p-4 bg-white border-t border-slate-200 shrink-0">
+                <button onclick="updateAll(); if(window.innerWidth < 1024) toggleSidebar();" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded shadow-lg transition flex justify-center items-center gap-2 font-bold text-sm">
+                    <i class="fas fa-sync-alt"></i> Recalculate
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col bg-slate-50 relative overflow-hidden w-full">
+            
+            <div class="bg-white border-b border-slate-200 flex px-2 shadow-sm z-10 no-print overflow-x-auto scrollbar-hide">
+                <div class="tab-btn active" onclick="switchTab('3d', this)"><i class="fas fa-cube mr-2"></i>3D Preview</div>
+                <div class="tab-btn" onclick="switchTab('pattern', this)"><i class="fas fa-ruler-combined mr-2"></i>2D Layout & Blueprint</div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-2 md:p-6 relative">
+                
+                <!-- 3D View -->
+                <div id="tab-3d" class="tab-content h-full flex flex-col print-area">
+                    <div id="3d-container" class="w-full h-[60vh] min-h-[400px] bg-slate-900 rounded-lg shadow-inner overflow-hidden relative border border-slate-700">
+                        <div class="absolute top-3 left-3 z-10 bg-black/60 text-white text-[10px] px-3 py-2 rounded backdrop-blur pointer-events-none font-mono">
+                            <div class="font-bold text-blue-400 mb-1">MODE: MITER CUT</div>
+                            Interact: 1 Finger Rotate / 2 Fingers Pan
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2D Pattern -->
+                <div id="tab-pattern" class="tab-content hidden flex flex-col h-full print-area">
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-3 no-print">
+                        <div class="flex justify-between items-center mb-2">
+                             <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fas fa-pencil-ruler text-blue-500"></i> Blueprint Marking Guide
+                            </h2>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                            <div class="bg-slate-50 p-2 rounded border border-slate-200">
+                                <span class="block text-slate-500 font-semibold uppercase">1. เส้นรอบวง</span>
+                                <span id="info-circum" class="text-lg font-mono font-bold text-slate-800">-</span>
+                                <span class="text-slate-400 ml-1">mm</span>
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded border border-slate-200">
+                                <span class="block text-slate-500 font-semibold uppercase">2. แบ่งช่องละ</span>
+                                <span id="info-spacing" class="text-lg font-mono font-bold text-blue-600">-</span>
+                                <span class="text-slate-400 ml-1">mm</span>
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded border border-slate-200">
+                                <span class="block text-slate-500 font-semibold uppercase">3. จำนวนจุด</span>
+                                <span id="info-points" class="text-lg font-mono font-bold text-slate-800">-</span>
+                                <span class="text-slate-400 ml-1">Div</span>
+                            </div>
+                            <div class="bg-red-50 p-2 rounded border border-red-200">
+                                <span class="block text-red-600 font-semibold uppercase">4. ความสูงสูงสุด</span>
+                                <span id="info-max-height" class="text-lg font-mono font-bold text-red-700">-</span>
+                                <span class="text-red-400 ml-1">mm</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3 text-xs text-slate-600 bg-blue-50 p-2 rounded border border-blue-100 flex items-start gap-2">
+                            <i class="fas fa-info-circle text-blue-500 mt-0.5"></i>
+                            <p><strong>การวัดวาดมือบนท่อ:</strong> สามารถใช้ <strong>ตัวเลขสีเขียวด้านล่าง</strong> ในการดึงตลับเมตรแนวขวางตามเส้นรอบวง และ <strong>ตัวเลขสีแดงด้านบน</strong> วัดความสูงรอยตัดแกน Y ได้ทันที</p>
+                        </div>
+                    </div>
+                    
+                    <div id="graph" class="flex-1 w-full bg-white rounded-lg shadow-sm border border-slate-200 min-h-[500px]"></div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Data Standards
+        const pipeStd = {
+            '2': 60.3, '3': 88.9, '4': 114.3, '6': 168.3, '8': 219.1,
+            '10': 273.0, '12': 323.8
+        };
+
+        let scene, camera, renderer, controls, mainGroup;
+        let calcData = {};
+
+        function autoFillPipe() {
+            const size = document.getElementById('pipeNPS').value;
+            if(pipeStd[size]) {
+                document.getElementById('pipeOD').value = pipeStd[size];
+                updateAll();
+            }
+        }
+
+        function init3D() {
+            const container = document.getElementById('3d-container');
+            scene = new THREE.Scene(); scene.background = new THREE.Color(0x0f172a);
+            
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 10000);
+            camera.position.set(500, 300, 500);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+            
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+            const keyLight = new THREE.DirectionalLight(0xffffff, 1);
+            keyLight.position.set(300, 500, 300);
+            scene.add(keyLight);
+            
+            const grid = new THREE.GridHelper(1000, 20, 0x1e293b, 0x0f172a);
+            grid.position.y = 0;
+            scene.add(grid);
+            
+            animate();
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        }
+        function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            const ov = document.getElementById('mobileOverlay');
+            sb.classList.toggle('-translate-x-full');
+            ov.classList.toggle('hidden'); ov.classList.toggle('opacity-0');
+        }
+
+        function toggleHalf(sourceId) {
+            const isChecked = document.getElementById(sourceId).checked;
+            if(document.getElementById('halfPlate')) document.getElementById('halfPlate').checked = isChecked;
+            if(document.getElementById('halfPlateMobile')) document.getElementById('halfPlateMobile').checked = isChecked;
+            updateAll();
+        }
+
+        // --- CALCULATION LOGIC ---
+        function updateAll() {
+            const angleDeg = parseFloat(document.getElementById('intAngle').value) || 45;
+            const dOD = parseFloat(document.getElementById('pipeOD').value) || 114.3;
+            const divisions = parseInt(document.getElementById('manualDivs').value) || 24;
+            const baseOffset = parseFloat(document.getElementById('baseOffset').value) || 50;
+            const isHalf = document.getElementById('halfPlate').checked || (document.getElementById('halfPlateMobile') && document.getElementById('halfPlateMobile').checked);
+
+            const r = dOD / 2;
+            const tiltRad = (90 - angleDeg) * Math.PI / 180;
+            const tanTilt = Math.tan(tiltRad);
+            const circum = Math.PI * dOD;
+
+            let xPts=[], yPts=[], markX=[], markY=[];
+            const curveRes = 360;
+
+            // Generate high-res curve for smooth drawing
+            for(let i=0; i<=curveRes; i++) {
+                const theta = (i/curveRes) * 2 * Math.PI;
+                const yVal = r * Math.cos(theta - Math.PI) * tanTilt;
+                xPts.push(i * circum / curveRes);
+                yPts.push(yVal);
+            }
+
+            // Normalize Y based on Base Offset
+            const minY = Math.min(...yPts);
+            yPts = yPts.map(y => (y - minY) + baseOffset);
+
+            // Generate mark points for Blueprint
+            for(let i=0; i<=divisions; i++) {
+                const theta = (i/divisions) * 2 * Math.PI;
+                const yVal = r * Math.cos(theta - Math.PI) * tanTilt;
+                markX.push(i * circum / divisions);
+                markY.push((yVal - minY) + baseOffset);
+            }
+
+            // Half plate logic
+            if (isHalf) {
+                const halfCurveIdx = Math.floor(xPts.length / 2) + 1;
+                xPts = xPts.slice(0, halfCurveIdx);
+                yPts = yPts.slice(0, halfCurveIdx);
+                
+                const halfMarkIdx = Math.floor(markX.length / 2) + 1;
+                markX = markX.slice(0, halfMarkIdx);
+                markY = markY.slice(0, halfMarkIdx);
+            }
+
+            calcData = {
+                x: xPts, y: yPts, 
+                markX: markX, markY: markY, 
+                circum: circum, 
+                isHalf: isHalf, 
+                maxHeight: Math.max(...markY)
+            };
+
+            // Update UI Stats
+            document.getElementById('info-circum').innerText = circum.toFixed(1) + (isHalf ? ' (Half)' : '');
+            document.getElementById('info-points').innerText = divisions;
+            document.getElementById('info-spacing').innerText = (circum / divisions).toFixed(2);
+            document.getElementById('info-max-height').innerText = calcData.maxHeight.toFixed(1);
+
+            update3D(dOD, angleDeg, divisions, calcData.maxHeight);
+            renderGraph(calcData);
+        }
+
+        // --- 3D RENDER (Miter Cut) ---
+        function update3D(dOD, angleDeg, divisions, visMaxHeight) {
+            if(mainGroup) scene.remove(mainGroup);
+            mainGroup = new THREE.Group();
+            scene.add(mainGroup);
+
+            const r = dOD / 2;
+            const tiltRad = (90 - angleDeg) * Math.PI / 180;
+
+            // A. Flat Plate
+            const plateGeo = new THREE.BoxGeometry(dOD * 4, 2, dOD * 4);
+            const plateMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.2, roughness: 0.8 });
+            const plate = new THREE.Mesh(plateGeo, plateMat);
+            plate.position.y = -1;
+            mainGroup.add(plate);
+
+            // B. Tilted Pipe
+            const pipeGeo = new THREE.BufferGeometry();
+            const vertices = [], indices = [];
+            
+            for(let i=0; i<=divisions; i++) {
+                const fraction = i / divisions;
+                const theta = fraction * 2 * Math.PI;
+                const cx = r * Math.cos(theta - Math.PI);
+                const cz = r * Math.sin(theta - Math.PI);
+                const localY_Bot = r * Math.cos(theta - Math.PI) * Math.tan(tiltRad);
+                const localY_Top = visMaxHeight + 100;
+                
+                vertices.push(cx, localY_Bot, cz);
+                vertices.push(cx, localY_Top, cz);
+            }
+            
+            for(let i=0; i<divisions; i++) {
+                const base = i * 2;
+                const nextBase = (i + 1) * 2;
+                indices.push(base, base+1, nextBase);
+                indices.push(base+1, nextBase+1, nextBase);
+            }
+            
+            pipeGeo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            pipeGeo.setIndex(indices);
+            pipeGeo.computeVertexNormals();
+            
+            const pipeMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, metalness: 0.3, roughness: 0.4, side: THREE.DoubleSide });
+            const pipeMesh = new THREE.Mesh(pipeGeo, pipeMat);
+            
+            // Rotate pipe so bottom cut is flat to plate
+            pipeMesh.rotation.z = -tiltRad; 
+            mainGroup.add(pipeMesh);
+        }
+
+        // --- 2D BLUEPRINT RENDER ---
+        function renderGraph(d) {
+            const maxX = Math.max(...d.markX);
+            const maxY = Math.max(...d.markY);
+            const title = `Blueprint Template (เส้นรอบวง: ${d.circum.toFixed(1)}mm${d.isHalf ? ' - ครึ่งแผ่น' : ''})`;
+            const shapes = [];
+            const annotations = [];
+
+            // Base Line
+            shapes.push({ type: 'line', x0: 0, x1: maxX, y0: 0, y1: 0, line: { color: 'black', width: 2 } });
+
+            // Vertical projection lines
+            d.markX.forEach((x, i) => {
+                shapes.push({ type: 'line', x0: x, y0: 0, x1: x, y1: d.markY[i], line: { color: '#22c55e', width: 1, dash: 'dot' } });
+            });
+
+            // The Curve
+            const traceCurve = { x: d.x, y: d.y, mode: 'lines', fill: 'tozeroy', line: { color: '#2563eb', width: 2 }, fillcolor: 'rgba(59, 130, 246, 0.1)', hoverinfo: 'none' };
+            const traceMarks = { x: d.markX, y: d.markY, mode: 'markers', marker: { size: 6, color: '#1e40af' }, hovertemplate: '<b>ระยะ X:</b> %{x:.1f} mm<br><b>ความสูง Y:</b> %{y:.1f} mm<extra></extra>' };
+
+            // X Labels (Green, Bottom)
+            d.markX.forEach((x, i) => {
+                annotations.push({ x: x, y: -8, text: `${x.toFixed(1)}`, showarrow: false, font: { size: 11, color: '#16a34a' }, textangle: -90, xanchor: 'center', yanchor: 'top' });
+            });
+
+            // Y Labels (Red, Top)
+            d.markX.forEach((x, i) => {
+                annotations.push({ x: x, y: d.markY[i] + 8, text: `${d.markY[i].toFixed(1)}`, showarrow: false, font: { size: 11, color: '#ef4444' }, textangle: -90, xanchor: 'center', yanchor: 'bottom' });
+            });
+
+            const layout = { 
+                title: { text: title, font: { size: 14, color: '#334155' } }, 
+                xaxis: { title: '', zeroline: false, showgrid: false, showticklabels: false, range: [-maxX*0.05, maxX*1.05] }, 
+                yaxis: { title: 'ความสูง Y (mm)', scaleanchor: "x", scaleratio: 1, gridcolor: '#e2e8f0', zeroline: false, showgrid: false, range: [-40, maxY + 40] }, 
+                margin: { t: 50, l: 50, r: 20, b: 30 }, shapes: shapes, annotations: annotations, hovermode: 'closest', plot_bgcolor: '#ffffff',
+            };
+
+            Plotly.newPlot('graph', [traceCurve, traceMarks], layout, {displayModeBar: false, responsive: true});
+        }
+
+        // --- EXPORT PDF & DXF ---
+        async function saveFile(blob, filename, description, mimeType, extension) {
+            if ('showSaveFilePicker' in window) {
+                try {
+                    const handle = await window.showSaveFilePicker({ suggestedName: filename, types: [{ description: description, accept: { [mimeType]: [extension] } }] });
+                    const writable = await handle.createWritable(); await writable.write(blob); await writable.close(); return; 
+                } catch (err) { if (err.name === 'AbortError') return; }
+            }
+            const blobUrl = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = blobUrl; link.download = filename; link.target = '_blank'; document.body.appendChild(link);
+            setTimeout(() => { link.click(); setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(blobUrl); }, 200); }, 10);
+        }
+
+        async function exportPDF() {
+            if(!calcData || !calcData.x) return;
+            if(!window.jspdf) { alert("Error: PDF Library not loaded."); return; }
+            const d = calcData; const { jsPDF } = window.jspdf;
+            
+            const getVal = (id) => { const el = document.getElementById(id), elMobile = document.getElementById(id + 'Mobile'); return (window.innerWidth < 768 && elMobile) ? elMobile.value : (el ? el.value : (elMobile ? elMobile.value : null)); };
+            const pSize = getVal('paperSize'), orientation = getVal('pdfOrientation') || 'landscape', scaleMode = getVal('pdfScale');
+            const doc = new jsPDF({ orientation: orientation, unit:'mm', format: pSize });
+            
+            let pageH, pageW; const dims = { 'a4': [210, 297], 'a3': [297, 420], 'a2': [420, 594], 'a1': [594, 841], 'a0': [841, 1189] }; const sizeDim = dims[pSize] || [210, 297];
+            if (orientation === 'landscape') { pageH = Math.min(sizeDim[0], sizeDim[1]); pageW = Math.max(sizeDim[0], sizeDim[1]); } 
+            else { pageH = Math.max(sizeDim[0], sizeDim[1]); pageW = Math.min(sizeDim[0], sizeDim[1]); }
+            
+            const totalW = Math.max(...d.markX), maxY = Math.max(...d.y), minY = Math.min(...d.y);
+            const contentHeight = (maxY - minY) + 60, contentWidth = totalW + 30; 
+
+            let scale = 1, scaleText = "1:1"; 
+            if (scaleMode === 'fit') { scale = Math.min((pageW - 30) / contentWidth, (pageH - 50) / contentHeight); scaleText = `Fit (${(scale*100).toFixed(1)}%)`; } 
+            else { scale = parseFloat(scaleMode); scaleText = scale === 1 ? "1:1" : `1:${1/scale}`; }
+            
+            const startX = (pageW - (totalW * scale)) / 2;
+            let pdfBaseRefY = (pageH / 2) + (((maxY + minY) / 2) * scale);
+            if (pdfBaseRefY - (maxY * scale) < 40) pdfBaseRefY = 40 + (maxY * scale);
+            const toPDF = (x, y) => ({ x: startX + (x * scale), y: pdfBaseRefY - (y * scale) });
+
+            // Header Text
+            doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text(`Pipe to Plate Pro - MITER CUT`, 15, 15); doc.setFontSize(10); doc.setFont("helvetica", "normal"); 
+            doc.text(`Pipe OD: ${document.getElementById('pipeOD').value}mm | Cut Angle: ${document.getElementById('intAngle').value}deg | Scale: ${scaleText}${d.isHalf ? ' (HALF PLATE)' : ''}`, 15, 22);
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 27);
+            
+            // Draw Base Line
+            doc.setLineWidth(0.5); doc.setDrawColor(0); const pBL = toPDF(0, 0), pBR = toPDF(totalW, 0); doc.line(pBL.x, pBL.y, pBR.x, pBR.y); doc.setFontSize(8); doc.text("Base Line (Wrap around pipe)", pBL.x, pBL.y - 2); 
+
+            doc.setFontSize(7); let lastX_Row1 = -999, lastY_Label_X = -999, lastY_Label_Y = -999, yStagger = 0; 
+            
+            for(let i=0; i < d.markX.length; i++) {
+                const ptCurve = toPDF(d.markX[i], d.markY[i]), ptBase = toPDF(d.markX[i], 0);
+                
+                // Vertical Guideline (Green Dash)
+                doc.setDrawColor(34, 197, 94); doc.setLineWidth(0.2); doc.setLineDash([1, 1], 0); doc.line(ptBase.x, ptBase.y, ptCurve.x, ptCurve.y); doc.setLineDash([], 0); 
+                
+                // X Axis Text (Green)
+                doc.setTextColor(0, 100, 0); 
+                let rowY = ptBase.y + 7; 
+                if (Math.abs(ptBase.x - lastX_Row1) < 3.5) rowY += 8; else lastX_Row1 = ptBase.x;
+                doc.text(d.markX[i].toFixed(1), ptBase.x + 1, rowY, { angle: 90 });
+                
+                // Y Axis Text (Red Staggered)
+                doc.setTextColor(239, 68, 68); 
+                let yOffset = -2; 
+                if (Math.hypot(ptCurve.x - lastY_Label_X, ptCurve.y - lastY_Label_Y) < 5) yStagger = (yStagger + 1) % 3; else yStagger = 0;
+                yOffset -= (yStagger * 6); 
+                doc.text(d.markY[i].toFixed(1), ptCurve.x + 1, ptCurve.y + yOffset, { angle: 90 });
+                lastY_Label_X = ptCurve.x; lastY_Label_Y = ptCurve.y;
+            }
+
+            // Draw Curve Line
+            const pts = d.x.map((x,i) => toPDF(x, d.y[i])); doc.setLineWidth(0.5); doc.setDrawColor(200, 0, 0); 
+            for(let i=0; i<pts.length-1; i++) doc.line(pts[i].x, pts[i].y, pts[i+1].x, pts[i+1].y); 
+            
+            doc.setDrawColor(0); doc.setLineWidth(0.2); doc.line(pBL.x, pBL.y, pts[0].x, pts[0].y); doc.line(pBR.x, pBR.y, pts[pts.length-1].x, pts[pts.length-1].y); 
+            doc.setFontSize(8); doc.setTextColor(0); 
+            doc.text("Legend: Red = Cut Height (Y) | Green = Tape Measure (X) | Green Dash = Projection Lines", 15, pageH - 10);
+            
+            doc.save(`pattern_miter_${d.isHalf?'HALF_':''}${scaleText.replace(/[:\s\(\)%]/g, '-')}.pdf`); 
+        }
+
+        async function exportDXF() {
+            if(!calcData || !calcData.x) return;
+            let d = calcData, w = Math.max(...d.markX), dxf = '0\nSECTION\n2\nENTITIES\n';
+            const l = (x1,y1,x2,y2,lay) => `0\nLINE\n8\n${lay}\n10\n${x1.toFixed(3)}\n20\n${y1.toFixed(3)}\n11\n${x2.toFixed(3)}\n21\n${y2.toFixed(3)}\n`;
+            
+            for(let i=0; i<d.x.length-1; i++) dxf += l(d.x[i], d.y[i], d.x[i+1], d.y[i+1], 'CUT_LINE'); 
+            dxf += l(0, 0, w, 0, 'FRAME'); dxf += l(0, 0, 0, d.y[0], 'FRAME'); dxf += l(w, 0, w, d.y[d.y.length-1], 'FRAME'); 
+            
+            for(let i=0; i<d.markX.length; i++) dxf += l(d.markX[i], 0, d.markX[i], 5, 'TICKS'); 
+            dxf += '0\nENDSEC\n0\nEOF\n'; 
+            
+            const blob = new Blob([dxf], { type: 'application/dxf' }); 
+            await saveFile(blob, `pattern_miter${d.isHalf?'_HALF':''}.dxf`, 'DXF File', 'application/dxf', '.dxf');
+        }
+
+        function switchTab(id, btn) {
+            document.querySelectorAll('.tab-content').forEach(e=>e.classList.add('hidden')); document.getElementById('tab-'+id).classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); if(id !== '3d') Plotly.relayout('graph', {autosize: true});
+        }
+        
+        window.onload = () => { init3D(); setTimeout(updateAll, 500); };
+    </script>
+</body>
+</html>
