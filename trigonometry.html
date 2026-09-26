@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>คำนวณตรีโกณมิติ</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+      color: #fff;
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 15px; /* ลด Padding บนมือถือ */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .container {
+      width: 100%;
+      max-width: 500px; /* จำกัดความกว้างบน PC ให้ดูสวยงาม ไม่ยืดเกินไป */
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 25px;
+      padding: 25px 15px;
+      background: rgba(17, 24, 39, 0.8);
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    
+    .tagline {
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #cbd5e1;
+      margin-bottom: 15px;
+    }
+
+    /* ปุ่มกดดูวิดีโอ */
+    .btn-video {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background-color: #ef4444; 
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+      width: 100%; /* ปุ่มกว้างเต็มคอนเทนเนอร์บนมือถือ */
+      max-width: 250px;
+    }
+
+    .btn-video:hover {
+      background-color: #dc2626;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(239, 68, 68, 0.4);
+    }
+    
+    .calculator {
+      background: #111827;
+      padding: 25px 20px; /* ลด Padding บนมือถือ */
+      border-radius: 16px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+      width: 100%;
+    }
+    
+    h2 {
+      text-align: center;
+      color: #60a5fa;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
+    }
+    
+    /* ปรับปรุง Input Group ให้ตอบสนองกับหน้าจอมือถือ */
+    .input-group {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+      background: #1f2937;
+      border-radius: 8px;
+      padding: 5px 10px;
+      border: 1px solid transparent;
+      transition: border 0.3s;
+    }
+
+    .input-group:focus-within {
+      border: 1px solid #60a5fa;
+      box-shadow: 0 0 5px rgba(96, 165, 250, 0.3);
+    }
+    
+    .input-group label {
+      width: 70px; /* ลดความกว้าง Label บนมือถือ */
+      font-weight: bold;
+      color: #cbd5e1;
+      font-size: 0.95rem;
+    }
+    
+    .input-group input {
+      flex: 1;
+      padding: 10px 5px;
+      border: none;
+      background: transparent;
+      color: white;
+      font-size: 1.1rem; /* ขยายฟอนต์ในช่องกรอกให้กดง่าย */
+      width: 100%;
+    }
+    
+    .input-group input:focus {
+      outline: none;
+    }
+    
+    /* ปรับปุ่มคำนวณและล้างค่า */
+    .calculator-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .calculator button {
+      flex: 1;
+      background: #3b82f6;
+      border: none;
+      color: white;
+      padding: 15px 10px; /* ขยายพื้นที่กดปุ่มสำหรับนิ้วมือ */
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .calculator button:hover {
+      background: #2563eb;
+    }
+
+    .btn-clear {
+      background: #4b5563 !important;
+    }
+
+    .btn-clear:hover {
+      background: #374151 !important;
+    }
+    
+    .result {
+      margin-top: 25px;
+      font-size: 1.3em;
+      font-weight: bold;
+      text-align: center;
+      color: #fbbf24;
+      padding: 15px;
+      background: rgba(31, 41, 55, 0.7);
+      border-radius: 8px;
+      border: 1px dashed #fbbf24;
+      word-break: break-word; /* ป้องกันตัวเลขยาวทะลุกรอบ */
+    }
+    
+    img.triangle-img {
+      max-width: 100%;
+      height: auto;
+      margin-bottom: 20px;
+      border-radius: 12px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* Media Query สำหรับปรับแต่งเล็กน้อยบนจอใหญ่ */
+    @media (min-width: 768px) {
+      body {
+        padding: 40px 20px;
+      }
+      .input-group label {
+        width: 100px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="tagline">คำนวณสามเหลี่ยมมุมฉาก</div>
+      
+      <a href="https://youtu.be/hhc-WO15IME" target="_blank" class="btn-video">
+        📺 ดูวิดีโอวิธีใช้งาน
+      </a>
+    </header>
+    
+    <div class="calculator">
+      <img class="triangle-img" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhaR-hTLHpC9TwGycDdlnycBNFKaEr6tXM1pPIKbFruwNrDY2UMc9TMKFN_3qTjtMapx28P7xJHfI3IMw9eeuE5gi79C12glkBQrHq0wngeLUclL-mRzERrpJ0L4rZXl8dLnfOps_-fiENfe3BCfOLhRX2joiKKErBrfOYltT2s07bT4Kl3hv0qwoP6/s373/triangle.png" alt="ภาพสามเหลี่ยม" />
+      
+      <h2>คำนวณตรีโกณมิติ</h2>
+      
+      <div class="input-group">
+        <label for="sideA">Side a:</label>
+        <input id="sideA" type="number" placeholder="เช่น 3" inputmode="decimal" />
+      </div>
+      <div class="input-group">
+        <label for="sideB">Side b:</label>
+        <input id="sideB" type="number" placeholder="เช่น 4" inputmode="decimal" />
+      </div>
+      <div class="input-group">
+        <label for="sideC">Side c:</label>
+        <input id="sideC" type="number" placeholder="ด้านตรงข้ามมุมฉาก" inputmode="decimal" />
+      </div>
+      <div class="input-group">
+        <label for="angleA">Angle A:</label>
+        <input id="angleA" type="number" placeholder="มุม A (°)" inputmode="decimal" />
+      </div>
+      <div class="input-group">
+        <label for="angleB">Angle B:</label>
+        <input id="angleB" type="number" placeholder="มุม B (°)" inputmode="decimal" />
+      </div>
+      
+      <div class="calculator-buttons">
+        <button onclick="calculateTriangle()">คำนวณ</button>
+        <button class="btn-clear" onclick="clearEntries()">ล้างค่า</button>
+      </div>
+      
+      <div class="result" id="resultArea">Area = </div>
+    </div>
+  </div>
+      
+  <script>
+    function calculateTriangle() {
+      const sideA = parseFloat(document.getElementById('sideA').value);
+      const sideB = parseFloat(document.getElementById('sideB').value);
+      const sideC = parseFloat(document.getElementById('sideC').value);
+      const angleA = parseFloat(document.getElementById('angleA').value);
+      const angleB = parseFloat(document.getElementById('angleB').value);
+
+      let a = sideA, b = sideB, c = sideC, A = angleA, B = angleB, area;
+
+      if (!isNaN(sideA) && !isNaN(sideB)) {
+        c = Math.sqrt(sideA ** 2 + sideB ** 2);
+        A = Math.atan(sideA / sideB) * (180 / Math.PI);
+        B = 90 - A;
+        area = 0.5 * sideA * sideB;
+      } else if (!isNaN(sideB) && !isNaN(sideC)) {
+        a = Math.sqrt(sideC ** 2 - sideB ** 2);
+        A = Math.acos(sideB / sideC) * (180 / Math.PI);
+        B = 90 - A;
+        area = 0.5 * a * sideB;
+      } else if (!isNaN(sideA) && !isNaN(sideC)) {
+        b = Math.sqrt(sideC ** 2 - sideA ** 2);
+        A = Math.asin(sideA / sideC) * (180 / Math.PI);
+        B = 90 - A;
+        area = 0.5 * sideA * b;
+      } else if (!isNaN(sideA) && !isNaN(angleA)) {
+        A = angleA;
+        B = 90 - A;
+        b = sideA / Math.tan(A * (Math.PI / 180));
+        c = sideA / Math.sin(A * (Math.PI / 180));
+        area = 0.5 * sideA * b;
+      } else if (!isNaN(sideA) && !isNaN(angleB)) {
+        B = angleB;
+        A = 90 - B;
+        b = sideA * Math.tan(B * (Math.PI / 180));
+        c = sideA / Math.cos(B * (Math.PI / 180));
+        area = 0.5 * sideA * b;
+      } else if (!isNaN(sideB) && !isNaN(angleA)) {
+        A = angleA;
+        B = 90 - A;
+        a = sideB * Math.tan(A * (Math.PI / 180));
+        c = sideB / Math.cos(A * (Math.PI / 180));
+        area = 0.5 * a * sideB;
+      } else if (!isNaN(sideB) && !isNaN(angleB)) {
+        B = angleB;
+        A = 90 - B;
+        a = sideB / Math.tan(B * (Math.PI / 180));
+        c = sideB / Math.sin(B * (Math.PI / 180));
+        area = 0.5 * a * sideB;
+      } else if (!isNaN(sideC) && !isNaN(angleA)) {
+        A = angleA;
+        B = 90 - A;
+        a = sideC * Math.sin(A * (Math.PI / 180));
+        b = sideC * Math.cos(A * (Math.PI / 180));
+        area = 0.5 * a * b;
+      } else if (!isNaN(sideC) && !isNaN(angleB)) {
+        B = angleB;
+        A = 90 - B;
+        a = sideC * Math.cos(B * (Math.PI / 180));
+        b = sideC * Math.sin(B * (Math.PI / 180));
+        area = 0.5 * a * b;
+      } else {
+        document.getElementById('resultArea').innerText = "โปรดกรอกข้อมูลให้เพียงพอ (อย่างน้อย 2 ค่า)";
+        return;
+      }
+
+      document.getElementById('sideA').value = a ? a.toFixed(2) : sideA;
+      document.getElementById('sideB').value = b ? b.toFixed(2) : sideB;
+      document.getElementById('sideC').value = c ? c.toFixed(2) : sideC;
+      document.getElementById('angleA').value = A ? A.toFixed(4) : angleA;
+      document.getElementById('angleB').value = B ? B.toFixed(4) : angleB;
+      document.getElementById('resultArea').innerText = `Area = ${area.toFixed(2)}`;
+    }
+
+    function clearEntries() {
+      document.getElementById('sideA').value = '';
+      document.getElementById('sideB').value = '';
+      document.getElementById('sideC').value = '';
+      document.getElementById('angleA').value = '';
+      document.getElementById('angleB').value = '';
+      document.getElementById('resultArea').innerText = 'Area = ';
+    }
+  </script>
+</body>
+</html>

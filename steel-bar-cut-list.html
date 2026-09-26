@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Cut 1D - Steel Optimization</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #1976D2;
+            --secondary: #263238;
+            --success: #4CAF50;
+            --danger: #F44336;
+            --warning: #FF9800;
+            --purple: #8E24AA;
+            --bg-color: #ECEFF1;
+            --panel-bg: #ffffff;
+            --border-color: #CFD8DC;
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        body { margin: 0; padding: 0; background-color: var(--bg-color); color: #333; }
+
+        /* Header */
+        header {
+            background-color: var(--secondary); color: white; padding: 12px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10;
+        }
+        header h1 { margin: 0; font-size: 1.2rem; font-weight: 600; }
+
+        /* Layout */
+        .container { 
+            display: flex; flex-wrap: wrap; gap: 20px; padding: 20px; max-width: 1400px; margin: 0 auto;
+        }
+
+        /* Left Panel - Inputs */
+        .left-panel {
+            flex: 1; min-width: 320px; max-width: 480px; 
+            background-color: var(--panel-bg); padding: 20px; border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 15px;
+        }
+
+        /* Right Panel - Results */
+        .right-panel { flex: 2; min-width: 320px; }
+
+        /* Card Styles */
+        .card { border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; background: #fff; }
+        .card-title { margin-top: 0; margin-bottom: 12px; font-size: 1rem; color: var(--primary); border-bottom: 2px solid var(--bg-color); padding-bottom: 8px; font-weight: bold; }
+
+        /* Form Controls */
+        .form-group { margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;}
+        .form-group label { font-size: 0.85rem; font-weight: 500; width: 45%; color: #546E7A;}
+        .form-group input, .form-group select { width: 55%; padding: 6px 10px; border: 1px solid #B0BEC5; border-radius: 4px; outline: none; font-size: 0.9rem;}
+        
+        .input-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+        .input-row input, .input-row select { padding: 6px; border: 1px solid #B0BEC5; border-radius: 4px; outline: none; width: 100%; font-size: 0.9rem;}
+        
+        button {
+            padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer;
+            font-weight: bold; color: white; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-size: 0.9rem;
+        }
+        button:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.2);}
+        button:disabled { background-color: #B0BEC5 !important; cursor: not-allowed; transform: none; box-shadow: none;}
+
+        .btn-primary { background-color: var(--primary); }
+        .btn-success { background-color: var(--success); }
+        .btn-danger { background-color: var(--danger); }
+        .btn-warning { background-color: var(--warning); color: #333;}
+        .btn-purple { background-color: var(--purple); }
+        .btn-dark { background-color: var(--secondary); }
+
+        /* Table */
+        .table-container { overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; min-height: 200px; max-height: 350px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        th, td { border-bottom: 1px solid var(--border-color); padding: 8px; text-align: left; }
+        th { background-color: #ECEFF1; position: sticky; top: 0; color: #455A64; font-weight: bold; z-index: 1;}
+        tbody tr:hover { background-color: #F5F5F5; }
+        .del-btn { color: var(--danger); cursor: pointer; text-align: center; font-weight: bold; }
+
+        /* Canvas / Result Area */
+        #resultContainer { background: white; padding: 25px; border-radius: 8px; min-height: 500px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        
+        .material-group { margin-bottom: 25px; }
+        .material-title { 
+            background: #1565C0; color: white; padding: 8px 12px; 
+            border-radius: 4px; display: block; margin-bottom: 10px; font-weight: bold;
+            font-size: 0.95rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .pattern-row { display: flex; align-items: center; margin-bottom: 8px; font-size: 0.85rem; flex-wrap: wrap;}
+        .pattern-info { width: 130px; font-weight: bold; line-height: 1.3; padding-right: 10px; margin-bottom: 2px;}
+        .pattern-info.is-remnant { color: var(--purple); }
+        .pattern-info.is-new { color: var(--primary); }
+        .pattern-info .pattern-count { font-weight: normal; color: #555; font-size: 0.8rem;}
+        
+        .bar-container {
+            flex: 1; height: 28px; border: 1px solid #455A64; min-width: 250px;
+            display: flex; position: relative; background: #fff;
+            border-radius: 2px; overflow: hidden;
+        }
+        
+        .cut-piece {
+            height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #333; border-right: 1px solid #757575; position: relative; overflow: hidden;
+            background-color: #E8F5E9; text-align: center; font-weight: bold;
+            white-space: nowrap; padding: 0 2px;
+        }
+        .kerf-piece { background-color: #424242; height: 100%; }
+        .waste-piece {
+            height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: #F5F5F5; color: #555; text-align: center; border-left: 1px dashed #9E9E9E;
+            white-space: nowrap; font-weight: bold; padding: 0 2px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; backdrop-filter: blur(3px);
+        }
+        .modal-content {
+            background-color: #fff; padding: 25px; border-radius: 8px; width: 90%; max-width: 800px; max-height: 85vh; overflow-y: auto;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--bg-color); padding-bottom: 10px; margin-bottom: 15px;}
+        .close { font-size: 1.5rem; font-weight: bold; cursor: pointer; color: #9E9E9E;}
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1><i class="fas fa-layer-group"></i> Pro Cut 1D - Steel Optimization</h1>
+        <div>
+            <button class="btn-warning" onclick="openRemnantModal()"><i class="fas fa-boxes"></i> คลังเศษเหล็ก</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Left Panel: Inputs -->
+        <div class="left-panel">
+            
+            <!-- Global Settings -->
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-cog"></i> ตั้งค่าพื้นฐาน</h3>
+                <div class="form-group">
+                    <label>ชื่อโครงการ:</label>
+                    <input type="text" id="g_project" value="โปรเจกต์งานตัดเหล็กรวม">
+                </div>
+                <div class="form-group">
+                    <label>ยาวมาตรฐาน (mm):</label>
+                    <input type="number" id="g_stock" value="6000">
+                </div>
+                <div class="form-group">
+                    <label>เผื่อตัด/Kerf (mm):</label>
+                    <input type="number" id="g_kerf" value="3.0" step="0.5">
+                </div>
+                <div class="form-group">
+                    <label>ราคา (บาท/กก.):</label>
+                    <input type="number" id="g_price" value="25.0">
+                </div>
+            </div>
+
+            <!-- Input Parts -->
+            <div class="card" style="flex: 1; display: flex; flex-direction: column;">
+                <h3 class="card-title"><i class="fas fa-list-ul"></i> เพิ่มรายการชิ้นงาน</h3>
+                
+                <div class="input-row">
+                    <select id="in_type" style="flex: 1.2;" onchange="updateSizeDropdown()"></select>
+                    <select id="in_size" style="flex: 2;" onchange="updateWeight()"></select>
+                </div>
+                <div class="input-row">
+                    <select id="in_grade" style="flex: 1;">
+                        <option value="SS400">SS400</option>
+                        <option value="SM490">SM490</option>
+                        <option value="A36">A36</option>
+                        <option value="ทั่วไป">ทั่วไป</option>
+                    </select>
+                    <span style="font-size: 0.8rem; color: #555;">นน.:</span>
+                    <input type="text" id="in_weight" readonly title="น้ำหนัก (kg/m)" style="background:#ECEFF1; width:60px; flex:none; text-align:center; font-weight:bold; color:var(--warning);">
+                    <span style="font-size: 0.8rem; color: #555;">kg/m</span>
+                </div>
+                <div class="input-row">
+                    <input type="number" id="in_length" placeholder="ยาว(mm)" min="1" style="flex: 1.5;">
+                    <span style="padding: 0 2px;">x</span>
+                    <input type="number" id="in_qty" placeholder="จำนวน" min="1" style="width:60px; flex:none;">
+                    <button class="btn-success" onclick="addPartItem()"><i class="fas fa-plus"></i></button>
+                </div>
+
+                <div style="margin-bottom: 8px; display: flex; justify-content: flex-end;">
+                    <button class="btn-dark" onclick="openPasteModal()" style="font-size: 0.75rem; padding: 5px 10px;"><i class="fas fa-paste"></i> วางจาก Excel</button>
+                </div>
+
+                <!-- Parts Table -->
+                <div class="table-container">
+                    <table id="partsTable">
+                        <thead>
+                            <tr>
+                                <th>ขนาด (Size)</th>
+                                <th>ยาว(mm)</th>
+                                <th>จำนวน</th>
+                                <th style="width:30px; text-align:center;"><i class="fas fa-trash"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody id="partsTbody"></tbody>
+                    </table>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button class="btn-danger" style="flex: 1;" onclick="clearParts()"><i class="fas fa-eraser"></i> ล้าง</button>
+                    <button class="btn-primary" style="flex: 2; font-size: 1rem;" onclick="calculateCut()"><i class="fas fa-rocket"></i> ประมวลผลตัด</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Result & Canvas -->
+        <div class="right-panel">
+            <div style="margin-bottom: 10px; display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;">
+                <button class="btn-warning" id="btnSaveWaste" style="display:none;" onclick="saveWasteToInventory()"><i class="fas fa-save"></i> เก็บเศษเข้าคลัง</button>
+                <button class="btn-danger" id="btnPdf" style="display:none;" onclick="exportPDF()"><i class="fas fa-file-pdf"></i> บันทึก PDF</button>
+            </div>
+
+            <div id="resultContainer">
+                <div style="text-align: center; color: #9E9E9E; margin-top: 150px;">
+                    <i class="fas fa-ruler-combined" style="font-size: 3rem; margin-bottom: 15px; color: #CFD8DC;"></i>
+                    <h3>กรุณาเพิ่มชิ้นงานและกด "ประมวลผลตัด"</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Remnant Manager -->
+    <div id="remnantModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="margin: 0; color: var(--purple);"><i class="fas fa-boxes"></i> จัดการคลังเศษเหล็ก (Remnants)</h3>
+                <span class="close" onclick="closeRemnantModal()">&times;</span>
+            </div>
+            <div class="table-container" style="max-height: 400px;">
+                <table id="remnantTable">
+                    <thead>
+                        <tr>
+                            <th style="width:60px; text-align:center;">ใช้งาน</th>
+                            <th>วัสดุ (Size)</th>
+                            <th>เกรด</th>
+                            <th>ความยาว</th>
+                            <th style="width:50px; text-align:center;">ลบ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="remnantTbody"></tbody>
+                </table>
+            </div>
+            <div style="margin-top: 15px; display: flex; justify-content: space-between; flex-wrap: wrap; gap:10px;">
+                <div>
+                    <button class="btn-success" onclick="toggleAllRemnants(true)">ใช้ทั้งหมด</button>
+                    <button class="btn-warning" onclick="toggleAllRemnants(false)">ไม่ใช้ทั้งหมด</button>
+                </div>
+                <button class="btn-danger" onclick="clearAllRemnants()">ล้างคลังทั้งหมด</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        const STEEL_DB = {
+            'H-Beam': [
+                {name: 'H 100x100x6.0x8', weight: 17.2}, {name: 'H 125x125x6.5x9', weight: 23.8},
+                {name: 'H 150x150x7.0x10', weight: 31.5}, {name: 'H 175x175x7.5x11', weight: 40.2},
+                {name: 'H 200x200x8.0x12', weight: 49.9}, {name: 'H 250x250x9.0x14', weight: 72.4}, {name: 'H 300x300x10.0x15', weight: 94.0}
+            ],
+            'WF-Beam': [
+                {name: 'WF 150x75x5.0x7', weight: 14.0}, {name: 'WF 200x100x5.5x8', weight: 21.3},
+                {name: 'WF 250x125x6.0x9', weight: 29.6}, {name: 'WF 300x150x6.5x9', weight: 36.7},
+                {name: 'WF 350x175x7.0x11', weight: 49.6}, {name: 'WF 400x200x8.0x13', weight: 66.0}
+            ],
+            'Pipe': [
+                {name: 'Pipe 1/2" (21.7x2.0)', weight: 0.97}, {name: 'Pipe 3/4" (27.2x2.3)', weight: 1.41},
+                {name: 'Pipe 1" (34.0x2.3)', weight: 1.80}, {name: 'Pipe 1 1/4" (42.7x3.2)', weight: 3.09},
+                {name: 'Pipe 1 1/2" (48.6x3.2)', weight: 3.58}, {name: 'Pipe 2" (60.5x3.2)', weight: 4.52},
+                {name: 'Pipe 2 1/2" (76.3x3.2)', weight: 5.77}, {name: 'Pipe 3" (89.1x3.2)', weight: 6.78},
+                {name: 'Pipe 4" (114.3x3.2)', weight: 8.77}, {name: 'Pipe 6" (165.2x4.5)', weight: 17.80}
+            ],
+            'Angle': [
+                {name: 'L 40x40x3', weight: 1.83}, {name: 'L 50x50x4', weight: 3.06},
+                {name: 'L 65x65x6', weight: 5.91}, {name: 'L 75x75x6', weight: 5.91},
+                {name: 'L 100x100x7', weight: 10.70}, {name: 'L 130x130x9', weight: 17.90}
+            ],
+            'SquareTube': [
+                {name: 'SHS 25x25x2.3', weight: 1.53}, {name: 'SHS 50x50x2.3', weight: 3.34},
+                {name: 'SHS 75x75x3.2', weight: 7.01}, {name: 'SHS 100x100x3.2', weight: 9.52},
+                {name: 'SHS 125x125x4.5', weight: 16.60}, {name: 'SHS 150x150x4.5', weight: 20.10}
+            ],
+            'RectangularTube': [
+                {name: 'RHS 50x25x2.3', weight: 2.44}, {name: 'RHS 75x38x2.3', weight: 3.81},
+                {name: 'RHS 100x50x3.2', weight: 7.01}, {name: 'RHS 125x75x3.2', weight: 9.52},
+                {name: 'RHS 150x50x3.2', weight: 9.52}, {name: 'RHS 200x100x4.5', weight: 20.10}
+            ],
+            'C-Lip Channel': [
+                {name: 'LLC 75x45x15x2.3', weight: 3.25}, {name: 'LLC 100x50x20x2.3', weight: 4.29},
+                {name: 'LLC 125x50x20x3.2', weight: 6.38}, {name: 'LLC 150x50x20x3.2', weight: 6.95},
+                {name: 'LLC 200x75x20x3.2', weight: 9.96}
+            ]
+        };
+
+        let partsList = [];
+        let remnantsList = JSON.parse(localStorage.getItem('procut_remnants')) || [];
+        let currentResult = {}; 
+
+        window.onload = () => {
+            const typeSelect = document.getElementById('in_type');
+            for (let type in STEEL_DB) {
+                let opt = document.createElement('option');
+                opt.value = type; opt.innerHTML = type;
+                typeSelect.appendChild(opt);
+            }
+            updateSizeDropdown();
+        };
+
+        function updateSizeDropdown() {
+            const type = document.getElementById('in_type').value;
+            const sizeSelect = document.getElementById('in_size');
+            sizeSelect.innerHTML = '';
+            STEEL_DB[type].forEach(item => {
+                let opt = document.createElement('option');
+                opt.value = item.name; opt.innerHTML = item.name;
+                opt.dataset.weight = item.weight;
+                sizeSelect.appendChild(opt);
+            });
+            updateWeight();
+        }
+
+        function updateWeight() {
+            const sizeSelect = document.getElementById('in_size');
+            const weight = sizeSelect.options[sizeSelect.selectedIndex].dataset.weight;
+            document.getElementById('in_weight').value = parseFloat(weight).toFixed(2);
+        }
+
+        function guessWeight(rawName) {
+            let searchStr = String(rawName).toLowerCase().replace(/\*/g, 'x').replace(/\s/g, '');
+            for (let type in STEEL_DB) {
+                for (let item of STEEL_DB[type]) {
+                    let keyNorm = item.name.toLowerCase().replace(/\*/g, 'x').replace(/\s/g, '');
+                    if (searchStr === keyNorm || keyNorm.includes(searchStr) || searchStr.includes(keyNorm)) return item.weight;
+                }
+            }
+            return 0.0;
+        }
+
+        function addPartItem() {
+            const type = document.getElementById('in_type').value;
+            const size = document.getElementById('in_size').value;
+            const grade = document.getElementById('in_grade').value;
+            const length = parseInt(document.getElementById('in_length').value);
+            const qty = parseInt(document.getElementById('in_qty').value);
+            const weight = parseFloat(document.getElementById('in_weight').value);
+
+            if(!length || !qty || length <= 0 || qty <= 0) { Swal.fire('ข้อผิดพลาด', 'กรุณากรอกความยาวและจำนวน', 'error'); return; }
+
+            partsList.push({ size: `${type} - ${size}`, grade, length, qty, weight });
+            renderPartsTable();
+            document.getElementById('in_length').value = ''; document.getElementById('in_qty').value = ''; document.getElementById('in_length').focus();
+        }
+
+        async function openPasteModal() {
+            const { value: text } = await Swal.fire({
+                title: 'วางข้อมูลจาก Excel',
+                input: 'textarea',
+                inputLabel: 'วาง 4 คอลัมน์ (Size, Grade, Length, Qty)',
+                inputPlaceholder: 'H 100x100x6.0x8 \t SS400 \t 1500 \t 2',
+                showCancelButton: true, confirmButtonText: 'นำเข้า', cancelButtonText: 'ยกเลิก'
+            });
+
+            if (text) {
+                let count = 0;
+                text.trim().split('\n').forEach(row => {
+                    let cols = row.trim().split('\t');
+                    if(cols.length >= 4) {
+                        if(cols[0].toLowerCase().includes("size") || cols[0].toLowerCase().includes("profile")) return;
+                        try {
+                            let sz = cols[0].trim(), gr = cols[1].trim();
+                            let val1 = parseFloat(cols[2].replace(/,/g, '')), val2 = parseFloat(cols[3].replace(/,/g, ''));
+                            let l, q;
+                            if (val1 < val2 && val1 === parseInt(val1) && val1 < 1000) { q = parseInt(val1); l = Math.round(val2); } 
+                            else { l = Math.round(val1); q = parseInt(val2); }
+                            
+                            partsList.push({ size: sz, grade: gr, length: l, qty: q, weight: guessWeight(sz) });
+                            count++;
+                        } catch (e) {}
+                    }
+                });
+                if(count > 0) { renderPartsTable(); Swal.fire('สำเร็จ', `นำเข้า ${count} รายการ`, 'success'); } 
+                else { Swal.fire('ข้อผิดพลาด', 'รูปแบบข้อมูลไม่ถูกต้อง', 'error'); }
+            }
+        }
+
+        function renderPartsTable() {
+            const tbody = document.getElementById('partsTbody');
+            tbody.innerHTML = '';
+            partsList.forEach((p, index) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${p.size}</strong><br><small style="color:#757575">${p.grade} | ${p.weight} kg/m</small></td>
+                        <td style="font-weight:bold;">${p.length}</td><td style="font-weight:bold;">${p.qty}</td>
+                        <td class="del-btn" onclick="removePart(${index})"><i class="fas fa-times"></i></td>
+                    </tr>`;
+            });
+        }
+
+        function removePart(index) { partsList.splice(index, 1); renderPartsTable(); }
+
+        function clearParts() {
+            partsList = []; renderPartsTable();
+            document.getElementById('resultContainer').innerHTML = `<div style="text-align: center; color: #9E9E9E; margin-top: 150px;"><i class="fas fa-ruler-combined" style="font-size: 3rem; margin-bottom: 15px; color: #CFD8DC;"></i><h3>รายการว่างเปล่า</h3></div>`;
+            document.getElementById('btnSaveWaste').style.display = 'none'; document.getElementById('btnPdf').style.display = 'none';
+        }
+
+        function calculateCut() {
+            if(partsList.length === 0) { Swal.fire('แจ้งเตือน', 'ไม่มีรายการชิ้นงาน', 'warning'); return; }
+
+            const stockLen = parseInt(document.getElementById('g_stock').value);
+            const kerf = parseFloat(document.getElementById('g_kerf').value);
+            
+            let groupedData = {};
+            partsList.forEach(p => {
+                let key = `${p.size}|${p.grade}|${p.weight}`;
+                if(!groupedData[key]) groupedData[key] = [];
+                for(let i=0; i<p.qty; i++) groupedData[key].push(p.length);
+            });
+
+            currentResult = {}; 
+
+            for (let key in groupedData) {
+                let [size, grade, weightStr] = key.split('|');
+                let pieces = groupedData[key].sort((a,b) => b - a);
+                let availableRems = remnantsList.filter(r => r.size === size && r.grade === grade && r.use === true).sort((a,b) => a.length - b.length);
+                let rawBins = [];
+
+                for (let pLen of pieces) {
+                    let placed = false;
+                    for (let bin of rawBins) {
+                        let usedSpace = bin.items.reduce((sum, item) => sum + item, 0) + (bin.items.length * kerf);
+                        if (usedSpace + pLen <= bin.stock_len) { bin.items.push(pLen); placed = true; break; }
+                    }
+                    if (!placed) {
+                        for (let i = 0; i < availableRems.length; i++) {
+                            if (pLen <= availableRems[i].length) {
+                                rawBins.push({ stock_len: availableRems[i].length, is_remnant: true, items: [pLen] });
+                                availableRems.splice(i, 1); placed = true; break;
+                            }
+                        }
+                    }
+                    if (!placed) {
+                        if (pLen <= stockLen) { rawBins.push({ stock_len: stockLen, is_remnant: false, items: [pLen] }); } 
+                        else { Swal.fire('ข้อผิดพลาด', `ชิ้นงานยาว ${pLen}mm เกินท่อนมาตรฐาน ${stockLen}mm`, 'error'); return; }
+                    }
+                }
+
+                let patternDict = {};
+                rawBins.forEach(bin => {
+                    let hash = `${bin.stock_len}-${bin.is_remnant}-${bin.items.join(',')}`;
+                    if(!patternDict[hash]) patternDict[hash] = { stock_len: bin.stock_len, is_remnant: bin.is_remnant, items: bin.items, count: 0 };
+                    patternDict[hash].count++;
+                });
+                currentResult[key] = Object.values(patternDict);
+            }
+
+            renderVisualization(stockLen, kerf);
+            document.getElementById('btnSaveWaste').style.display = 'inline-flex'; document.getElementById('btnPdf').style.display = 'inline-flex';
+        }
+
+        // --- ระบบปรับขนาดตัวอักษรอัตโนมัติตามความกว้างเหล็ก (Scalable Font Size) ---
+        function renderVisualization(globalStock, kerf) {
+            const container = document.getElementById('resultContainer');
+            container.innerHTML = '';
+            
+            const price = parseFloat(document.getElementById('g_price').value);
+            const projName = document.getElementById('g_project').value;
+
+            let totalNewBars = 0, totalRemUsed = 0, totalCost = 0;
+
+            for (let key in currentResult) {
+                let weight = parseFloat(key.split('|')[2]);
+                currentResult[key].forEach(p => {
+                    if (p.is_remnant) totalRemUsed += p.count;
+                    else { totalNewBars += p.count; totalCost += (p.count * (globalStock/1000) * weight * price); }
+                });
+            }
+
+            let html = `
+                <div style="padding-bottom:10px; margin-bottom:20px; border-bottom: 2px solid #ECEFF1;">
+                    <h2 style="margin:0 0 8px 0; color:#333; font-size:1.4rem;">รายงานแผนการตัดเหล็กรูปพรรณ</h2>
+                    <div style="font-size: 0.9rem; line-height: 1.5; color:#455A64;">
+                        <strong>ชื่อโครงการ:</strong> ${projName}<br>
+                        <strong>ความยาวต่อท่อนมาตรฐาน:</strong> ${globalStock} mm | <strong>เผื่อตัด (Kerf):</strong> ${kerf.toFixed(1)} mm<br>
+                        เบิกเหล็กเต็มท่อน: <strong>${totalNewBars} ท่อน</strong> | ใช้เศษจากคลัง: <strong>${totalRemUsed} ชิ้น</strong> | ต้นทุนใหม่: <strong>฿${totalCost.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong>
+                    </div>
+                </div>
+            `;
+
+            for (let key in currentResult) {
+                let [size, grade, weightStr] = key.split('|');
+                let weight = parseFloat(weightStr);
+                let patterns = currentResult[key];
+                
+                let groupNewBars = patterns.filter(p => !p.is_remnant).reduce((sum, p) => sum + p.count, 0);
+                let groupRemBars = patterns.filter(p => p.is_remnant).reduce((sum, p) => sum + p.count, 0);
+
+                html += `<div class="material-group">`;
+                html += `<div class="material-title">วัสดุ: ${size} (เกรด ${grade}) | เบิกใหม่ ${groupNewBars} ท่อน | ใช้เศษ ${groupRemBars} ชิ้น</div>`;
+
+                patterns.forEach((pattern, index) => {
+                    let usedSpace = pattern.items.reduce((a,b)=>a+b, 0) + (pattern.items.length > 0 ? (pattern.items.length-1)*kerf : 0);
+                    let waste = pattern.stock_len - usedSpace;
+                    
+                    let pClass = pattern.is_remnant ? "is-remnant" : "is-new";
+
+                    html += `<div class="pattern-row">
+                                <div class="pattern-info ${pClass}">
+                                    รูปแบบ #${index+1}<br>
+                                    <span class="pattern-count">(ตัด ${pattern.count} ท่อน)</span>
+                                </div>
+                                <div class="bar-container">`;
+                    
+                    pattern.items.forEach((item, i) => {
+                        let pct = (item / pattern.stock_len) * 100;
+                        let itemWt = (item/1000)*weight;
+                        
+                        // ใช้คำสั่ง CSS clamp() ให้ขนาดฟอนต์ย่อ-ขยายตามความกว้าง (%) ของชิ้นงานเหล็กแบบไดนามิก
+                        // ยิ่งชิ้นงานแคบ ฟอนต์จะถูกบีบให้เล็กลงตาม (ขั้นต่ำสุด 8px, ใหญ่สุด 12px)
+                        let dynamicFontSize = `clamp(8px, ${pct * 0.45}vw, 12px)`;
+                        
+                        let lbl = "";
+                        if (pct >= 8) {
+                            lbl = itemWt > 0 ? `${item} (${itemWt.toFixed(1)}kg)` : `${item}`;
+                        } else if (pct >= 3.5) {
+                            lbl = `${item}`; // ถ้าสั้น แสดงเฉพาะความยาว
+                        } else {
+                            lbl = "..."; // ถ้าสั้นมากๆ จนมองไม่เห็น ให้ใส่จุดสามจุด
+                        }
+
+                        let tooltip = `ความยาว: ${item}mm | น้ำหนัก: ${itemWt.toFixed(2)}kg`;
+                        
+                        html += `<div class="cut-piece" style="width: ${pct}%; font-size: ${dynamicFontSize};" title="${tooltip}">${lbl}</div>`;
+                        
+                        if(i < pattern.items.length - 1 && kerf > 0) {
+                            let kPct = (kerf / pattern.stock_len) * 100;
+                            html += `<div class="kerf-piece" style="width: ${kPct}%;" title="Kerf ${kerf}mm"></div>`;
+                        }
+                    });
+
+                    if (waste > 0) {
+                        let wPct = (waste / pattern.stock_len) * 100;
+                        let wasteWt = (waste/1000)*weight;
+                        let dynamicWasteFontSize = `clamp(8px, ${wPct * 0.45}vw, 12px)`;
+                        
+                        let wLbl = "";
+                        if (wPct >= 8) {
+                            wLbl = wasteWt > 0 ? `เศษ ${Math.floor(waste)} (${wasteWt.toFixed(1)}kg)` : `เศษ ${Math.floor(waste)}`;
+                        } else if (wPct >= 3.5) {
+                            wLbl = `เศษ ${Math.floor(waste)}`;
+                        } else {
+                            wLbl = "...";
+                        }
+
+                        let bgHatch = waste >= 100 ? 'repeating-linear-gradient(45deg, #E0E0E0, #E0E0E0 3px, #EEEEEE 3px, #EEEEEE 6px)' : '#BDBDBD'; 
+                        let tooltipW = `เศษความยาว: ${waste.toFixed(1)}mm | น้ำหนัก: ${wasteWt.toFixed(2)}kg`;
+
+                        html += `<div class="waste-piece" style="width: ${wPct}%; background: ${bgHatch}; font-size: ${dynamicWasteFontSize};" title="${tooltipW}">${wLbl}</div>`;
+                    }
+                    html += `</div></div>`;
+                });
+                html += `</div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        // Inventory Methods
+        function saveWasteToInventory() {
+            let savedCount = 0;
+            for (let key in currentResult) {
+                let [size, grade, weightStr] = key.split('|');
+                currentResult[key].forEach(p => {
+                    let usedSpace = p.items.reduce((a,b)=>a+b, 0) + (p.items.length > 0 ? (p.items.length-1)*parseFloat(document.getElementById('g_kerf').value) : 0);
+                    let waste = p.stock_len - usedSpace;
+                    if (waste >= 100) { 
+                        for(let i=0; i<p.count; i++){ remnantsList.push({ size, grade, length: Math.floor(waste), use: false }); savedCount++; }
+                    }
+                });
+            }
+            if (savedCount > 0) {
+                localStorage.setItem('procut_remnants', JSON.stringify(remnantsList)); Swal.fire('สำเร็จ', `เก็บเศษ ${savedCount} ชิ้น เข้าคลัง`, 'success');
+            } else { Swal.fire('แจ้งเตือน', 'ไม่มีเศษเหล็กที่ยาวเกิน 100mm', 'info'); }
+        }
+
+        function openRemnantModal() { document.getElementById('remnantModal').style.display = 'flex'; renderRemnantTable(); }
+        function closeRemnantModal() { document.getElementById('remnantModal').style.display = 'none'; }
+        
+        function renderRemnantTable() {
+            const tbody = document.getElementById('remnantTbody'); tbody.innerHTML = '';
+            remnantsList.forEach((r, index) => {
+                let checked = r.use ? 'checked' : '';
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="text-align:center;"><input type="checkbox" ${checked} onchange="toggleRemnantUse(${index}, this.checked)"></td>
+                        <td>${r.size}</td><td style="text-align:center;">${r.grade}</td>
+                        <td style="font-weight:bold; color:var(--purple);">${r.length}</td>
+                        <td class="del-btn" onclick="deleteRemnant(${index})"><i class="fas fa-trash"></i></td>
+                    </tr>`;
+            });
+        }
+
+        function toggleRemnantUse(index, val) { remnantsList[index].use = val; localStorage.setItem('procut_remnants', JSON.stringify(remnantsList)); }
+        function toggleAllRemnants(val) { remnantsList.forEach(r => r.use = val); localStorage.setItem('procut_remnants', JSON.stringify(remnantsList)); renderRemnantTable(); }
+        function deleteRemnant(index) { remnantsList.splice(index, 1); localStorage.setItem('procut_remnants', JSON.stringify(remnantsList)); renderRemnantTable(); }
+        function clearAllRemnants() {
+            Swal.fire({ title: 'ยืนยัน?', text: "ลบทั้งหมดกู้คืนไม่ได้!", icon: 'warning', showCancelButton: true, confirmButtonText: 'ใช่, ลบเลย'
+            }).then((result) => { if(result.isConfirmed) { remnantsList = []; localStorage.setItem('procut_remnants', JSON.stringify(remnantsList)); renderRemnantTable(); }})
+        }
+
+        async function exportPDF() {
+            const btn = document.getElementById('btnPdf'); const originalHTML = btn.innerHTML;
+            btn.innerHTML = 'กำลังสร้าง...'; btn.disabled = true;
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+                const margin = 10, printableWidth = doc.internal.pageSize.getWidth() - (margin * 2), pdfHeight = doc.internal.pageSize.getHeight();
+                
+                const canvas = await html2canvas(document.getElementById('resultContainer'), { scale: 2, backgroundColor: "#ffffff" });
+                const imgData = canvas.toDataURL('image/png'), imgProps = doc.getImageProperties(imgData);
+                const imgHeightInPdf = (imgProps.height * printableWidth) / imgProps.width;
+
+                let position = margin, heightLeft = imgHeightInPdf - (pdfHeight - margin);
+                doc.addImage(imgData, 'PNG', margin, position, printableWidth, imgHeightInPdf);
+
+                while (heightLeft > 0) { position -= pdfHeight; doc.addPage(); doc.addImage(imgData, 'PNG', margin, position, printableWidth, imgHeightInPdf); heightLeft -= pdfHeight; }
+                doc.save(`CutList_${document.getElementById('g_project').value || 'Project'}.pdf`);
+            } catch (error) { Swal.fire('ข้อผิดพลาด', 'ไม่สามารถสร้าง PDF ได้', 'error'); } 
+            finally { btn.innerHTML = originalHTML; btn.disabled = false; }
+        }
+    </script>
+</body>
+</html>
